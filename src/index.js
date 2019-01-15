@@ -1,4 +1,6 @@
 'use strict';
-const {macAddress} = require('./components/macAddress');
+const requiredir = require("requiredir");
+const connections = requiredir("./connections");
 
-macAddress();
+connections.macAddress();
+connections.socketExample();

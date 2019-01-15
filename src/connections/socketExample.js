@@ -1,6 +1,6 @@
-const {socket} = require('./config/socket');
+const {socket} = require('../config/socket');
 
-exports.test = () => {
+module.exports = () => {
     // ----------test and example
     const testDataObjectToServer = {
         bernard: 'green',

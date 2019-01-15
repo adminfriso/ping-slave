@@ -19,6 +19,7 @@
   "homepage": "https://github.com/adminfriso/ping-slave#readme",
   "dependencies": {
     "express": "^4.16.4",
+    "requiredir": "^1.0.7",
     "socket.io": "^2.2.0"
   },
   "devDependencies": {
