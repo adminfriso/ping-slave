@@ -1,3 +1,4 @@
+'use strict';
 const {socket} = require('../config/socket');
 
 module.exports = () => {

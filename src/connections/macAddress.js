@@ -5,7 +5,7 @@ const {exec} = require('child_process');
 module.exports = () => {
     const piGetMacAddressPattern = "/eth0.*\n.*\n.*\n.*ether (..:..:..:..:..:..)/gm";
     const appleGetMacAddressPattern = /ether (..:..:..:..:..:..)/gm;
-    
+
     socket.on('mac-address', function () {
         // Receive mac address via execute command and return it on the socket
         exec('ifconfig -a', (err, stdout, stderr) => {
