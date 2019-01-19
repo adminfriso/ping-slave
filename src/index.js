@@ -9,3 +9,4 @@ global.exec = exec;
 connections.macAddress();
 connections.executeCommand();
 connections.socketExample();
+connections.fileUpload();
