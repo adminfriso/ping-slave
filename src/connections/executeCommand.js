@@ -1,12 +1,10 @@
 'use strict';
-const {socket} = require('../config/socket');
-const {exec} = require('child_process');
 
 module.exports = () => {
 // receive data from the server
-    socket.on('execute-command', (data) => {
+    services.socket.on('execute-command', (data) => {
         if (data == null){
-            socket.emit('execute-command', null);
+            services.socket.emit('execute-command', null);
             return;
         }
         exec(data.command, (err, stdout, stderr) => {
@@ -19,7 +17,7 @@ module.exports = () => {
                 stderr,
             };
             // send data to the server
-            socket.emit('execute-command', response);
+            services.socket.emit('execute-command', response);
         });
     });
 };
