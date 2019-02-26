@@ -6,7 +6,7 @@ global.connections = requiredir("./connections");
 const {exec} = require('child_process');
 global.exec = exec;
 
-connections.macAddress();
+connections.serialNumber();
 connections.executeCommand();
 connections.socketExample();
 connections.fileUpload();
