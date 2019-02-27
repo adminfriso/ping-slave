@@ -2,15 +2,15 @@
 
 module.exports = () => {
 // receive data from the server
-    services.socket.on('execute-command', (data) => {
-        if (data == null){
+    services.socket.on('execute-command', (command) => {
+        if (command == null){
             services.socket.emit('execute-command', null);
             return;
         }
-        exec(data.command, (err, stdout, stderr) => {
+        exec(command, (err, stdout, stderr) => {
             if (err) {
                 // node couldn't execute the command
-                return;
+                services.socket.emit('execute-command', err);
             }
             let response = {
                 stdout,

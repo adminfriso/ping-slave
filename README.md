@@ -12,6 +12,8 @@ This repo features:
 
 https://www.digitalocean.com/community/tutorials/how-to-set-up-a-node-js-application-for-production-on-ubuntu-16-04
 
+https://www.npmjs.com/package/python-shell
+
 https://flaviocopes.com/node-difference-dev-prod/
 
 TODO: 

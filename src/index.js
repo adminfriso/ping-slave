@@ -8,5 +8,4 @@ global.exec = exec;
 
 connections.serialNumber();
 connections.executeCommand();
-connections.socketExample();
 connections.fileUpload();
