@@ -12,13 +12,12 @@ This repo features:
 
 https://www.digitalocean.com/community/tutorials/how-to-set-up-a-node-js-application-for-production-on-ubuntu-16-04
 
-https://www.npmjs.com/package/python-shell
+
 
 https://flaviocopes.com/node-difference-dev-prod/
 
 TODO: 
-* python native support
-* remove socketExample when finished
+* python native support using the new idea using this package [pyton-shell](https://www.npmjs.com/package/python-shell)
 * installation guide for production
 
 ## Getting Started
