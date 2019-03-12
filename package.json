@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/adminfriso/ping-slave#readme",
   "dependencies": {
+    "dotenv": "^6.2.0",
     "requiredir": "^1.0.7",
     "socket.io-client": "^2.2.0"
   },

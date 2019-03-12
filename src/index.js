@@ -1,4 +1,5 @@
 'use strict';
+require('dotenv').config()
 const requiredir = require("requiredir");
 global.config = requiredir('./config');
 global.services = requiredir('./services');
