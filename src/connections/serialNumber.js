@@ -1,7 +1,7 @@
 'use strict';
 
 module.exports = () => {
-  const piPattern = /(\S*)/gm;
+  const piPattern = /\s(\S*)/gm;
   const piCommand = 'cat /proc/cpuinfo | grep ^Serial | cut -d":" -f2';
   const applePattern = /"(\w{12})"/gm;
   const appleCommand = 'ioreg -l | grep IOPlatformSerialNumber';
