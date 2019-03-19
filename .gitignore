@@ -1,4 +1,5 @@
-storage/
+storage/*
+!.gitignore
 # Logs
 logs
 *.log

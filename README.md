@@ -16,9 +16,12 @@ http://pm2.keymetrics.io/
 
 https://flaviocopes.com/node-difference-dev-prod/
 
+https://www.macworld.co.uk/how-to/mac/how-to-set-up-raspberry-pi-3-with-mac-3637490/
+
+https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
+
 TODO: 
 * python native support using the new idea using this package [pyton-shell](https://www.npmjs.com/package/python-shell)
-* installation guide for production
 
 ## Getting Started
 
@@ -50,11 +53,45 @@ npm run serve
 ```
 
 ### Deployment
+First setup a wifi connection to connect with
 
-#### webserver
+https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
+
+Then enable ssh 
+
+https://www.raspberrypi.org/documentation/remote-access/ssh/
+
+Then run installation guide
+
+Then next part is pointed at the installation of node, this is also present in install.sh
+#### Node
+set the environment to production
+```bash
+NODE_ENV=production
+```
+copy the env variable and edit it if the configuration does not meet the current system
+```bash
+cp .env.example .env
+# optional if the configuration does not meet the current system
+nano .env
+```
+install the packages
+```bash
+npm install
+```
+run on production, the & is to run it in the background
+```bash
+node src/index.js &
+```
 
 ### Updating
-
+stop the application
+```bash
+fg
+# then type CTRL+C
+npm install
+node src/index.js &
+```
 
 ## Built With
 * [Node.js](https://nodejs.org/en/docs/) - The server framework used
