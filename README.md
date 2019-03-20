@@ -20,9 +20,11 @@ https://www.macworld.co.uk/how-to/mac/how-to-set-up-raspberry-pi-3-with-mac-3637
 
 https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
 
+https://www.raspberrypi.org/documentation/remote-access/ssh/
+
 TODO: 
 * python native support using the new idea using this package [pyton-shell](https://www.npmjs.com/package/python-shell)
-
+* sd opslot zetten
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. 
