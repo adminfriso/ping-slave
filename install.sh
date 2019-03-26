@@ -94,7 +94,7 @@ cp ./.env.example ./.env
 echo "installing dependencies"
 npm install
 # start server
-echo "start node server"
+echo "install and start node server"
 
 sudo pm2 startup
 sudo pm2 start src/index.js --watch
