@@ -70,10 +70,13 @@ echo "npm version"
 npm -v
 
 echo "going to the pi user"
-exit
+exit;
 
 echo "setting node to production mode"
 NODE_ENV=production
+
+echo "installing pm2"
+sudo npm install pm2@latest -g
 
 # setup git
 echo "configure git"
@@ -92,4 +95,9 @@ echo "installing dependencies"
 npm install
 # start server
 echo "start node server"
-node src/index.js
+
+sudo pm2 startup
+sudo pm2 start src/index.js --watch
+sudo pm2 save
+
+reboot
