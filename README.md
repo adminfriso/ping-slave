@@ -8,23 +8,16 @@ This repo features:
 * Executing commands on the beacon.
 * Return the serial number of the raspberry pi as identification of the beacon for the master project.
 
-## TODO and usefull links
-
-https://www.digitalocean.com/community/tutorials/how-to-set-up-a-node-js-application-for-production-on-ubuntu-16-04
-
-http://pm2.keymetrics.io/
-
-https://flaviocopes.com/node-difference-dev-prod/
-
-https://www.macworld.co.uk/how-to/mac/how-to-set-up-raspberry-pi-3-with-mac-3637490/
-
-https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
-
-https://www.raspberrypi.org/documentation/remote-access/ssh/
-
-TODO: 
+## TODO
 * python native support using the new idea using this package [pyton-shell](https://www.npmjs.com/package/python-shell)
 * sd opslot zetten
+
+## Raspberry usefull links
+* [Install clean distro using MAC OSX](https://www.macworld.co.uk/how-to/mac/how-to-set-up-raspberry-pi-3-with-mac-3637490/)
+* [Enable SSH](https://www.raspberrypi.org/documentation/remote-access/ssh/)
+* [Wireless (cli)](https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md)
+
+
 ## Getting Started
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. 
@@ -87,10 +80,13 @@ node src/index.js &
 ```
 
 ### Updating
-stop the application
+here we will not assume you use pm2, if you do use it, forget the commands ```fg and node src/index.js &```
+
 ```bash
 fg
 # then type CTRL+C
+git pull
+git reset HEAD --hard
 npm install
 node src/index.js &
 ```
