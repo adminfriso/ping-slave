@@ -13,7 +13,7 @@ if __name__ == '__main__':
             com = raw_input("s/i,time,file,volume,loop>")
         except Exception as e:
             print(e)
-            com="s,0,/home/pi/ch0.wav,0.08,1"
+            #com="s,0,/home/pi/ch0.wav,0.08,1"
         try: ## stop process
             if com=="SS":
                 p.terminate()
