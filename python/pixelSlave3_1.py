@@ -44,7 +44,8 @@ def pixels(child_conn,tijd,imgFile,duration,loop):
             for x in range (1, width):
                 #witte leds
                 b,g,r = rgb_im.getpixel((x, 0))
-                L = r*0.39
+                L = int(r*0.39)
+                L = gamma8[L]
                 pi_pwm.ChangeDutyCycle(L)
                 #addressables
                 for y in range (1,height):
