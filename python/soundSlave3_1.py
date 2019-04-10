@@ -5,7 +5,7 @@ try:
     with contextlib.redirect_stdout(None): #disabled de irritante welkom tekst van pygame
         from pygame import mixer
 except:
-    from pygame import mixer        
+    from pygame import mixer
 
 
 def player(child_conn,tijd,soundFile, volume,loop):
@@ -18,7 +18,7 @@ def player(child_conn,tijd,soundFile, volume,loop):
         a=1
     voice.play(sound, loops = loop)
     while loop==-1: # als geluid loopt werkt de get_busy niet, wel bij herhalingen
-        a=1    
+        a=1
     while voice.get_busy():
         a=1
     mixer.quit()

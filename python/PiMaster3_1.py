@@ -38,7 +38,7 @@ if __name__ == '__main__':
                 if com[3]=="":
                     volume=0.5
                 else:
-                    volume=float(com[3])             
+                    volume=float(com[3])
                 p = Process(target=player, args=(child_conn,tijd, soundFile, volume, loop-1))
             elif com[0]=="i":
                 imgFile=com[2]
@@ -48,7 +48,7 @@ if __name__ == '__main__':
                 if com[3]=="":
                     duration=3
                 else:
-                    duration=float(com[3])  
+                    duration=float(com[3])
                 p = Process(target=pixels, args=(child_conn,tijd, imgFile, duration, loop))
             elif com[0]=="p":
                 tijd=com[1]
