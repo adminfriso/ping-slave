@@ -8,17 +8,17 @@ This repo features:
 * Executing commands on the beacon.
 * Return the serial number of the raspberry pi as identification of the beacon for the master project.
 
-## TODO and usefull links
-
-https://www.digitalocean.com/community/tutorials/how-to-set-up-a-node-js-application-for-production-on-ubuntu-16-04
-
-http://pm2.keymetrics.io/
-
-https://flaviocopes.com/node-difference-dev-prod/
-
-TODO: 
+## TODO
 * python native support using the new idea using this package [pyton-shell](https://www.npmjs.com/package/python-shell)
-* installation guide for production
+* https://github.com/extrabacon/python-shell
+* https://stackoverflow.com/questions/31162888/bidirectional-communication-with-python-shell-and-node-js
+* sd opslot zetten
+
+## Raspberry usefull links
+* [Install clean distro using MAC OSX](https://www.macworld.co.uk/how-to/mac/how-to-set-up-raspberry-pi-3-with-mac-3637490/)
+* [Enable SSH](https://www.raspberrypi.org/documentation/remote-access/ssh/)
+* [Wireless (cli)](https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md)
+
 
 ## Getting Started
 
@@ -50,11 +50,48 @@ npm run serve
 ```
 
 ### Deployment
+First setup a wifi connection to connect with
 
-#### webserver
+https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
+
+Then enable ssh 
+
+https://www.raspberrypi.org/documentation/remote-access/ssh/
+
+Then run installation guide
+
+Then next part is pointed at the installation of node, this is also present in install.sh
+#### Node
+set the environment to production
+```bash
+NODE_ENV=production
+```
+copy the env variable and edit it if the configuration does not meet the current system
+```bash
+cp .env.example .env
+# optional if the configuration does not meet the current system
+nano .env
+```
+install the packages
+```bash
+npm install
+```
+run on production, the & is to run it in the background
+```bash
+node src/index.js &
+```
 
 ### Updating
+here we will not assume you use pm2, if you do use it, forget the commands ```fg and node src/index.js &```
 
+```bash
+fg
+# then type CTRL+C
+git pull
+git reset HEAD --hard
+npm install
+node src/index.js &
+```
 
 ## Built With
 * [Node.js](https://nodejs.org/en/docs/) - The server framework used

@@ -8,7 +8,7 @@ module.exports = () => {
                 return;
             }
             let response = {
-              uploaded: true,
+              success: true,
             };
             services.socket.emit('file-upload', response);
         });

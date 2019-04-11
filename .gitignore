@@ -1,4 +1,5 @@
-storage/
+storage/*
+!.gitignore
 # Logs
 logs
 *.log
@@ -63,3 +64,4 @@ typings/
 
 # ide files
 .idea
+*.pyc

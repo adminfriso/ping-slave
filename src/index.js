@@ -9,4 +9,5 @@ global.exec = exec;
 
 connections.serialNumber();
 connections.executeCommand();
+connections.executePython();
 connections.fileUpload();
