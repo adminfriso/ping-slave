@@ -97,7 +97,7 @@ npm install
 echo "install and start node server"
 
 sudo pm2 startup
-sudo pm2 start src/index.js --watch
+sudo pm2 start src/index.js
 sudo pm2 save
 
 reboot

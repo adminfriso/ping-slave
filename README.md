@@ -9,6 +9,7 @@ This repo features:
 * Return the serial number of the raspberry pi as identification of the beacon for the master project.
 
 ## TODO
+* install pygame
 * python native support using the new idea using this package [pyton-shell](https://www.npmjs.com/package/python-shell)
 * https://github.com/extrabacon/python-shell
 * https://stackoverflow.com/questions/31162888/bidirectional-communication-with-python-shell-and-node-js
