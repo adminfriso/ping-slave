@@ -18,7 +18,9 @@ apt upgrade
 apt install -y curl git build-essential gcc make python-dev scons swig tcpdump
 
 #install python and python packages
+apt install python-pip
 
+apt install python-pygame
 
 
 ## Ws2812 leds:
