@@ -9,13 +9,13 @@ module.exports = () => {
   pyShell.mode = 'binary';
   // pyShell.mode = 'text';
 
-  pyShell.end((err, exitCode, exitSignal) => {
-    console.log('python exited with:');
-    console.log('error:');
-    console.log(err);
-    console.log('The exit code was: ' + exitCode);
-    console.log('The exit signal was: ' + exitSignal);
-  });
+  // pyShell.end((err, exitCode, exitSignal) => {
+  //   console.log('python exited with:');
+  //   console.log('error:');
+  //   console.log(err);
+  //   console.log('The exit code was: ' + exitCode);
+  //   console.log('The exit signal was: ' + exitSignal);
+  // });
 
   // receive data from the server
   services.socket.on('execute-python', (command) => {

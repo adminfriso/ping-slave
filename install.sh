@@ -15,12 +15,14 @@ login_user="pi"
 # install general packages
 apt update
 apt upgrade
-apt install -y curl git build-essential gcc make python-dev scons swig tcpdump
+apt install -y curl git build-essential gcc make python-dev python3-dev scons swig tcpdump
 
 #install python and python packages
-apt install python-pip
+apt install python-pip python3-pip
 
 apt install python-pygame
+
+apt install python-pil
 
 
 ## Ws2812 leds:
