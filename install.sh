@@ -32,13 +32,13 @@ sed -i 's/^#dtparam=audio=on.*/dtparam=audio=on/' /boot/config.txt
 
 reboot
 
-git clone https://github.com/jgarff/rpi_ws281x
-cd rpi_ws281x/
-sudo scons
-cd python
-sudo python setup.py build
-sudo python setup.py install
-cd ../../
+#git clone https://github.com/jgarff/rpi_ws281x
+#cd rpi_ws281x/
+#sudo scons
+#cd python
+#sudo python setup.py build
+#sudo python setup.py install
+#cd ../../
 ## I2S Geluid
 #
 #sudo nano /boot/config.txt
@@ -50,6 +50,10 @@ cd ../../
 #dtoverlay=hifiberry-dac
 ##dtparam=audio=on
 sudo su
+
+pip install rpi_ws281x
+pip3 install rpi_ws281x
+
 sed -i 's/^#dtparam=i2c_arm=on.*/dtparam=i2c_arm=on/' /boot/config.txt
 sed -i 's/^#dtparam=i2s=on.*/dtparam=i2s=on/' /boot/config.txt
 sed -i 's/^#dtparam=spi=on.*/dtparam=spi=on/' /boot/config.txt
