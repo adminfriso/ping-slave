@@ -15,10 +15,10 @@ login_user="pi"
 # install general packages
 apt update
 apt upgrade -y
-apt install -y curl git build-essential gcc make python-dev python3-dev scons swig tcpdump htop
+apt install -y curl git build-essential gcc make python-dev scons swig tcpdump htop
 
 #install python and python packages
-apt install -y python-pip python3-pip
+apt install -y python-pip
 
 apt install -y python-pygame
 
@@ -28,17 +28,19 @@ apt install -y python-pil
 ## Ws2812 leds:
 echo "blacklist snd_bcm2835" | tee /etc/modprobe.d/snd-blacklist.conf
 
-sed -i 's/^#dtparam=audio=on.*/dtparam=audio=on/' /boot/config.txt
+sed -i 's/^dtparam=audio=on.*/#dtparam=audio=on/' /boot/config.txt
 
 reboot
 
-#git clone https://github.com/jgarff/rpi_ws281x
-#cd rpi_ws281x/
-#sudo scons
-#cd python
-#sudo python setup.py build
-#sudo python setup.py install
-#cd ../../
+git clone https://github.com/jgarff/rpi_ws281x
+cd rpi_ws281x/
+sudo scons
+cd python
+sudo python setup.py build
+sudo python setup.py install
+cd ../../
+
+reboot
 ## I2S Geluid
 #
 #sudo nano /boot/config.txt
@@ -50,13 +52,13 @@ reboot
 #dtoverlay=hifiberry-dac
 ##dtparam=audio=on
 sudo su
-pip3 install rpi_ws281x adafruit-circuitpython-neopixel
+pip install rpi_ws281x
 
 sed -i 's/^#dtparam=i2c_arm=on.*/dtparam=i2c_arm=on/' /boot/config.txt
 sed -i 's/^#dtparam=i2s=on.*/dtparam=i2s=on/' /boot/config.txt
 sed -i 's/^#dtparam=spi=on.*/dtparam=spi=on/' /boot/config.txt
 sed -i 's/^dtoverlay=lirc-rpi.*/#dtoverlay=lirc-rpi/' /boot/config.txt
-sed -i 's/^#dtoverlay=hifiberry-dac.*/dtoverlay=hifiberry-dac/' /boot/config.txt
+sed -i 's/^#dtoverlay=lirc-rpi.*/dtoverlay=hifiberry-dac/' /boot/config.txt
 sed -i 's/^dtparam=audio=on.*/#dtparam=audio=on/' /boot/config.txt
 
 
