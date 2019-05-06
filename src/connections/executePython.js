@@ -24,10 +24,13 @@ module.exports = () => {
       return;
     }
     // pyShell.send(command);
-    console.log(pyShell.stdout);
+    // console.log(pyShell.stdout);
     pyShell.on('message', function (message) {
       // handle message (a line of text from stdout)
-      services.socket.emit('execute-python', message);
+      let response = {
+                message,
+            };
+      services.socket.emit('execute-python', response);
     });
 
     // pyShell.send(command).end(function (err) {
