@@ -29,16 +29,16 @@ module.exports = () => {
     pyShell.send({ command: command}
 );
     // console.log(pyShell.stdout);
-    let message = '';
+    let responseMessage = '';
     pyShell.on('message', function (message) {
       // handle message (a line of text from stdout)
-      this.message += message;
-      setTimeout(response, 10);
+      responseMessage = responseMessage + message;
+      setTimeout(reply, 100);
 
     });
-    function response(){
+    function reply(){
       let response = {
-                message: message,
+                message: responseMessage,
             };
       services.socket.emit('execute-python', response);
     }
