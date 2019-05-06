@@ -5,7 +5,7 @@ module.exports = () => {
   let { PythonShell } = require('python-shell');
   console.log('starting python');
   let pyShell = new PythonShell('./python/PiMaster3_1.py', {
-    mode: 'json',
+    mode: 'text',
     pythonPath: '/usr/bin/python'
   });
   console.log('started python');
@@ -26,8 +26,9 @@ module.exports = () => {
     }
     console.log('send command to python');
     console.log(command);
-    pyShell.send({ command: command }
-    );
+    // pyShell.send({ command: command });
+    pyShell.send(command);
+
     // console.log(pyShell.stdout);
     let responseMessage = '';
     let responseTimer = null;
