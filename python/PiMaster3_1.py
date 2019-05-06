@@ -10,7 +10,7 @@ if __name__ == '__main__':
     while 1:
         parent_conn,child_conn = Pipe()
         try:
-            com = raw_input("s/i,time,file,volume,loop>")
+            com = input("s/i,time,file,volume,loop>")
         except Exception as e:
             print(e)
             #com="s,0,/home/pi/ch0.wav,0.08,1"
