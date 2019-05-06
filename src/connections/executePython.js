@@ -6,7 +6,7 @@ module.exports = () => {
   console.log('starting python');
   let pyShell = new PythonShell('./python/PiMaster3_1.py');
   console.log('started python');
-  pyShell.mode = 'text';
+  pyShell.mode = 'json';
   pyShell.pythonPath = '/usr/bin/python2.7';
   // pyShell.mode = 'text';
 
@@ -26,7 +26,8 @@ module.exports = () => {
     }
     console.log('send command to python');
     console.log(command);
-    pyShell.send(command);
+    pyShell.send({ command: command}
+);
     // console.log(pyShell.stdout);
     pyShell.on('message', function (message) {
       // handle message (a line of text from stdout)
