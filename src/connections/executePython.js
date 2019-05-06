@@ -6,6 +6,7 @@ module.exports = () => {
   console.log('starting python');
   let pyShell = new PythonShell('./python/PiMaster3_1.py', {
     mode: 'text',
+    pythonOptions: ['-u'],
     pythonPath: '/usr/bin/python2.7'
   });
   console.log('started python');
