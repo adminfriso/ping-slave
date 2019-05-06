@@ -30,14 +30,13 @@ module.exports = () => {
     );
     // console.log(pyShell.stdout);
     let responseMessage = '';
-    let responseTimer;
+    let responseTimer = null;
     pyShell.on('message', function (message) {
       // handle message (a line of text from stdout)
       responseMessage = responseMessage + message;
       if (responseTimer != null) {
-        clearTimeout(responseTimer);
+        responseTimer = setTimeout(reply, 50);
       }
-      responseTimer = setTimeout(reply, 50);
 
     });
 
