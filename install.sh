@@ -50,9 +50,7 @@ reboot
 #dtoverlay=hifiberry-dac
 ##dtparam=audio=on
 sudo su
-
-pip install rpi_ws281x
-pip3 install rpi_ws281x
+pip3 install rpi_ws281x adafruit-circuitpython-neopixel
 
 sed -i 's/^#dtparam=i2c_arm=on.*/dtparam=i2c_arm=on/' /boot/config.txt
 sed -i 's/^#dtparam=i2s=on.*/dtparam=i2s=on/' /boot/config.txt
