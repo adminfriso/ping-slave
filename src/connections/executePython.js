@@ -4,11 +4,11 @@ module.exports = () => {
   // initialize python
   let { PythonShell } = require('python-shell');
   console.log('starting python');
-  let pyShell = new PythonShell('./python/PiMaster3_1.py');
+  let pyShell = new PythonShell('./python/PiMaster3_1.py', {
+    mode: 'json',
+    pythonPath: '/usr/bin/python'
+  });
   console.log('started python');
-  pyShell.mode = 'json';
-  pyShell.pythonPath = '/usr/bin/python2.7';
-  // pyShell.mode = 'text';
 
   // pyShell.end((err, exitCode, exitSignal) => {
   //   console.log('python exited with:');
