@@ -23,7 +23,7 @@ module.exports = () => {
       services.socket.emit('execute-python', null);
       return;
     }
-    // pyShell.send(command);
+    pyShell.send(command);
     // console.log(pyShell.stdout);
     pyShell.on('message', function (message) {
       // handle message (a line of text from stdout)
