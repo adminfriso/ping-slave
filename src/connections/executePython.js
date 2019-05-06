@@ -26,40 +26,46 @@ module.exports = () => {
     }
     console.log('send command to python');
     console.log(command);
-    pyShell.send({ command: command}
-);
+    pyShell.send({ command: command }
+    );
     // console.log(pyShell.stdout);
     let responseMessage = '';
+    let responseTimer;
     pyShell.on('message', function (message) {
       // handle message (a line of text from stdout)
       responseMessage = responseMessage + message;
-      setTimeout(reply, 100);
+      if (responseTimer != null) {
+        clearTimeout(responseTimer);
+      }
+      responseTimer = setTimeout(reply, 50);
 
     });
-    function reply(){
+
+    function reply() {
       let response = {
-                message: responseMessage,
-            };
+        message: responseMessage,
+      };
       services.socket.emit('execute-python', response);
     }
+
     // pyShell.send(command).end(function (err) {
     //   if (err) console.log(err);
     //   else console.log('reached');
     // });
 
- //    pyShell.stdout.on('data', function(data) {
- //    // if (data == 'data'){
- //    //     pyShell.send('go').end(function(err){
- //    //         if (err) console.error(err);
- //    //         // ...
- //    //     });}
- //    // else if (data == 'data2'){
- //    //     pyShell.send('OK').end(function(err){
- //    //         if (err) console.error(err);
- //    //         // ...
- //    //     });}
- //    console.log(data);
- // });
+    //    pyShell.stdout.on('data', function(data) {
+    //    // if (data == 'data'){
+    //    //     pyShell.send('go').end(function(err){
+    //    //         if (err) console.error(err);
+    //    //         // ...
+    //    //     });}
+    //    // else if (data == 'data2'){
+    //    //     pyShell.send('OK').end(function(err){
+    //    //         if (err) console.error(err);
+    //    //         // ...
+    //    //     });}
+    //    console.log(data);
+    // });
 
     // message? => command?
     // pyShell.stdout.on('data', function (response) {
