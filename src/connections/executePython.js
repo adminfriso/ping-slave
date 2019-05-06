@@ -6,7 +6,7 @@ module.exports = () => {
   console.log('starting python');
   let pyShell = new PythonShell('./python/PiMaster3_1.py');
   console.log('started python');
-  pyShell.mode = 'binary';
+  pyShell.mode = 'text';
   // pyShell.mode = 'text';
 
   // pyShell.end((err, exitCode, exitSignal) => {
@@ -25,11 +25,15 @@ module.exports = () => {
     }
     pyShell.send(command);
     console.log(pyShell.stdout);
-
-    pyShell.send(command).end(function (err) {
-      if (err) console.log(err);
-      else console.log('reached');
+    shell.on('message', function (message) {
+      // handle message (a line of text from stdout)
+      services.socket.emit('execute-python', message);
     });
+
+    // pyShell.send(command).end(function (err) {
+    //   if (err) console.log(err);
+    //   else console.log('reached');
+    // });
 
  //    pyShell.stdout.on('data', function(data) {
  //    // if (data == 'data'){
@@ -46,11 +50,11 @@ module.exports = () => {
  // });
 
     // message? => command?
-    pyShell.stdout.on('data', function (response) {
-      console.log(response);
-      services.socket.emit('execute-python', response);
-      // received a message sent from the Python script (a simple "print" statement)
-    });
+    // pyShell.stdout.on('data', function (response) {
+    //   console.log(response);
+    //   services.socket.emit('execute-python', response);
+    //   // received a message sent from the Python script (a simple "print" statement)
+    // });
   });
 
 

@@ -14,15 +14,15 @@ login_user="pi"
 
 # install general packages
 apt update
-apt upgrade
-apt install -y curl git build-essential gcc make python-dev python3-dev scons swig tcpdump
+apt upgrade -y
+apt install -y curl git build-essential gcc make python-dev python3-dev scons swig tcpdump htop
 
 #install python and python packages
-apt install python-pip python3-pip
+apt install -y python-pip python3-pip
 
-apt install python-pygame
+apt install -y python-pygame
 
-apt install python-pil
+apt install -y python-pil
 
 
 ## Ws2812 leds:
@@ -77,6 +77,12 @@ node -v
 echo "npm version"
 npm -v
 
+echo "update npm"
+
+npm install -g npm
+
+npm -v
+
 echo "going to the pi user"
 exit;
 
@@ -108,4 +114,4 @@ sudo pm2 startup
 sudo pm2 start src/index.js
 sudo pm2 save
 
-reboot
+sudo reboot
