@@ -25,22 +25,22 @@ module.exports = () => {
       return;
     }
     console.log('send command to python');
-    console.log(command);
     // pyShell.send({ command: command });
     pyShell.send(command);
+    console.log(command);
 
     // console.log(pyShell.stdout);
     let responseMessage = '';
-    let responseTimer = null;
+    console.log('setting timer reply with timeout of 50ms');
+    let responseTimer = setTimeout(reply, 50);
     pyShell.on('message', function (message) {
       // handle message (a line of text from stdout)
+      console.log('response from python: ' + message);
       responseMessage = responseMessage + message;
-      console.log('added line to response message: ' + message);
-      if (responseTimer === null) {
-        console.log('setting timer reply');
-        responseTimer = setTimeout(reply, 50);
-      }
-
+      console.log('clearing timer');
+      clearTimeout(responseTimer);
+      console.log('setting timer reply with timeout of 50ms');
+      responseTimer = setTimeout(reply, 50);
     });
 
     function reply() {
