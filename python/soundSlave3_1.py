@@ -21,5 +21,6 @@ def player(child_conn,tijd,soundFile, volume,loop):
         a=1
     while voice.get_busy():
         a=1
+    delay(0.3)
     mixer.quit()
 #---------
