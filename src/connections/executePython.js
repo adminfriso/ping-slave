@@ -26,57 +26,45 @@ module.exports = () => {
       return;
     }
     console.log('send command to python');
+    // when in json mode
     // pyShell.send({ command: command });
+    // when in text mode;
     pyShell.send(command);
     console.log(command);
 
-    // console.log(pyShell.stdout);
-    let responseMessage = '';
-    // console.log('setting timer reply with timeout of 50ms');
-    // let responseTimer = setTimeout(reply, 50);
-    pyShell.on('message', function (message) {
-      // handle message (a line of text from stdout)
-      console.log('response from python: ' + message);
-      responseMessage = responseMessage + message;
-      reply();
-      // console.log('clearing timer');
-      // clearTimeout(responseTimer);
-      // console.log('setting timer reply with timeout of 50ms');
-      // responseTimer = setTimeout(reply, 50);
-    });
+    let response = {
+      success: true,
+    };
 
-    function reply() {
-      let response = {
-        message: responseMessage,
-      };
-      services.socket.emit('execute-python', response);
-    }
+    services.socket.emit('execute-python', response);
+
+    //TODO: for now we will do an early return with the fact that the message is sent
+    // let responseMessage = '';
+    // // console.log('setting timer reply with timeout of 50ms');
+    // // let responseTimer = setTimeout(reply, 50);
+    // pyShell.on('message', function (message) {
+    //   // handle message (a line of text from stdout)
+    //   console.log('response from python: ' + message);
+    //   responseMessage = responseMessage + message;
+    //   reply();
+    //   // console.log('clearing timer');
+    //   // clearTimeout(responseTimer);
+    //   // console.log('setting timer reply with timeout of 50ms');
+    //   // responseTimer = setTimeout(reply, 50);
+    // });
+    //
+    // function reply() {
+    //   let response = {
+    //     message: responseMessage,
+    //   };
+    //   services.socket.emit('execute-python', response);
+    // }
 
     // pyShell.send(command).end(function (err) {
     //   if (err) console.log(err);
     //   else console.log('reached');
     // });
 
-    //    pyShell.stdout.on('data', function(data) {
-    //    // if (data == 'data'){
-    //    //     pyShell.send('go').end(function(err){
-    //    //         if (err) console.error(err);
-    //    //         // ...
-    //    //     });}
-    //    // else if (data == 'data2'){
-    //    //     pyShell.send('OK').end(function(err){
-    //    //         if (err) console.error(err);
-    //    //         // ...
-    //    //     });}
-    //    console.log(data);
-    // });
-
-    // message? => command?
-    // pyShell.stdout.on('data', function (response) {
-    //   console.log(response);
-    //   services.socket.emit('execute-python', response);
-    //   // received a message sent from the Python script (a simple "print" statement)
-    // });
   });
 
 
