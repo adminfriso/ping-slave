@@ -25,12 +25,12 @@ module.exports = () => {
       services.socket.emit('execute-python', null);
       return;
     }
-    console.log('send command to python');
+    // console.log('send command to python');
     // when in json mode
     // pyShell.send({ command: command });
     // when in text mode;
     pyShell.send(command);
-    console.log(command);
+    // console.log(command);
 
     let response = {
       success: true,
