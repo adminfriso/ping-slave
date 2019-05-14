@@ -26,7 +26,7 @@ gamma8 = [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,
   115,117,119,120,122,124,126,127,129,131,133,135,137,138,140,142, 144,146,148,150,152,154,156,158,160,162,164,167,169,171,173,175,
   177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213, 215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 ]
 
-def pixels(child_conn,tijd,imgFile,duration,loop):
+def pixels(child_conn,imgFile,duration):
     fps=60
     im = Image.open(imgFile) 
     im = im.resize((int(duration*fps),200),5) #PIL.Image.LANCZOS
@@ -36,11 +36,11 @@ def pixels(child_conn,tijd,imgFile,duration,loop):
     rgb_im = im.convert('RGB')
     strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
     strip.begin()
-    tijd=float(tijd)
-    while (time.time()<tijd):
-        a=1
+#    tijd=float(tijd)
+#    while (time.time()<tijd):
+#        a=1
     try:
-        while loop>=1 :
+        #while loop>=1 :
             for x in range (1, width):
                 #witte leds
                 b,g,r = rgb_im.getpixel((x, 0))
@@ -58,8 +58,8 @@ def pixels(child_conn,tijd,imgFile,duration,loop):
                 time.sleep(1/fps)
             #pi_pwm.ChangeDutyCycle(0)
                 
-            print("loop:"+ str(loop))
-            loop=loop-1
+            #print("loop:"+ str(loop))
+            #loop=loop-1
         
     except KeyboardInterrupt:
             pi_pwm.ChangeDutyCycle(0)
