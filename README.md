@@ -10,7 +10,6 @@ This repo features:
 
 ## TODO
 * python native support finetuning [pyton-shell](https://www.npmjs.com/package/python-shell)
-* sd opslot zetten?? -> Gijs
 
 ## Raspberry usefull links
 * [Install clean distro using MAC OSX](https://www.macworld.co.uk/how-to/mac/how-to-set-up-raspberry-pi-3-with-mac-3637490/)
