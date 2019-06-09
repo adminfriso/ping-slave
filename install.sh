@@ -15,7 +15,7 @@ login_user="pi"
 # install general packages
 apt update
 apt upgrade -y
-apt install -y curl git build-essential gcc make python-dev scons swig tcpdump htop
+apt install -y curl git build-essential gcc make python-dev scons swig tcpdump htop espeak
 
 #install python and python packages
 apt install -y python-pip
