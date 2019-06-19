@@ -61,11 +61,15 @@ def pixels(child_conn,imgFile,duration):
                 strip.setPixelColor(y, Color(0,0,0))
             strip.show()    
             pi_pwm.ChangeDutyCycle(0)
+            time.sleep(0.1)
+            pi_pwm.ChangeDutyCycle(0)
                 
             #print("loop:"+ str(loop))
             #loop=loop-1
         
     except KeyboardInterrupt:
+            pi_pwm.ChangeDutyCycle(0)
+            time.sleep(0.1)
             pi_pwm.ChangeDutyCycle(0)
             
 
