@@ -3,17 +3,16 @@
 module.exports = () => {
   // initialize python
   let { PythonShell } = require('python-shell');
-  if (process.env.DEVICE === 'pi') {
+  let pyShell = null;
+  if (process.env.DEVICE !== 'apple') {
     console.log('starting python');
-
-    let pyShell = new PythonShell('./python/PiMaster3_1.py', {
+    pyShell = new PythonShell('./python/PiMaster3_1.py', {
       mode: 'text',
       // pythonOptions: ['-u'],
       pythonPath: '/usr/bin/python2.7'
     });
     console.log('started python');
   }
-
   // pyShell.end((err, exitCode, exitSignal) => {
   //   console.log('python exited with:');
   //   console.log('error:');
