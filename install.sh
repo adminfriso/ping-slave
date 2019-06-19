@@ -104,7 +104,18 @@ echo "enter repo"
 cd ping-slave
 echo "creating .env file"
 cp ./.env.example ./.env
-# TODO: set optional variables
+# SET CORRECT ENV VARIABLES FOR DEVICE
+read  -n 1 -p "Please set the variables first before you continue. Do you want to continue now?? y/n" continueInstall
+echo ""
+if [ "continueInstall" = "n" ]; then
+    echo "Commands to run after setting up the .env file"
+    echo "npm install"
+    echo "sudo pm2 startup"
+    echo "sudo pm2 start src/index.js"
+    echo "sudo pm2 save"
+    echo "sudo reboot"
+    exit
+fi
 echo "installing dependencies"
 npm install
 # start server

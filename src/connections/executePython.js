@@ -3,13 +3,16 @@
 module.exports = () => {
   // initialize python
   let { PythonShell } = require('python-shell');
-  console.log('starting python');
-  let pyShell = new PythonShell('./python/PiMaster3_1.py', {
-    mode: 'text',
-    // pythonOptions: ['-u'],
-    pythonPath: '/usr/bin/python2.7'
-  });
-  console.log('started python');
+  if (process.env.DEVICE === 'pi') {
+    console.log('starting python');
+
+    let pyShell = new PythonShell('./python/PiMaster3_1.py', {
+      mode: 'text',
+      // pythonOptions: ['-u'],
+      pythonPath: '/usr/bin/python2.7'
+    });
+    console.log('started python');
+  }
 
   // pyShell.end((err, exitCode, exitSignal) => {
   //   console.log('python exited with:');
@@ -25,12 +28,7 @@ module.exports = () => {
       services.socket.emit('execute-python', null);
       return;
     }
-    // console.log('send command to python');
-    // when in json mode
-    // pyShell.send({ command: command });
-    // when in text mode;
     pyShell.send(command);
-    // console.log(command);
 
     let response = {
       success: true,

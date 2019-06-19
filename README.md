@@ -9,7 +9,7 @@ This repo features:
 * Return the serial number of the raspberry pi as identification of the beacon for the master project.
 
 ## TODO
-* python native support finetuning [pyton-shell](https://www.npmjs.com/package/python-shell)
+* interne wifi antenne uit zetten op slave
 
 ## Raspberry usefull links
 * [Install clean distro using MAC OSX](https://www.macworld.co.uk/how-to/mac/how-to-set-up-raspberry-pi-3-with-mac-3637490/)
