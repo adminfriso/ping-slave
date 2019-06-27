@@ -1,6 +1,9 @@
+import subprocess
 import threading
 import Queue
 import time
+import sched
+
 #sound config
 try:
     import contextlib
@@ -39,12 +42,33 @@ strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, 
 strip.begin()
 pi_pwm.start(0)
 #init global variables
-fps=60;frame=0;starttijd=0
+fps=60;frame=0;starttijd=0;Beeld=None
+scheduler = sched.scheduler(time.time, time.sleep)
 
 # thread safe
 lightQueue = Queue.Queue()
 soundQueue = Queue.Queue()
-#waitQueue = queue.Queue()
+
+def SetStatus(name):
+    if (Beeld==None):
+        r=0;g=50;b=0
+        strip.setPixelColor(1, Color(r,g,b))
+        #netwerk verbinding
+        r=0;g=0;b=0    
+        code = subprocess.call(["ping", "-n", "1", "192.168.8.1"]) # router -> blauw
+        if code==0:
+            b=120
+        code = subprocess.call(["ping", "-n", "1", "8.8.8.8"]) # internet -> groen
+        if code==0:
+            g=120
+        code = subprocess.call(["ping", "-n", "1", "192.168.8.50"]) # server ->rood
+        if code==0:
+            r=120
+        strip.setPixelColor(2, Color(r,g,b))
+        #processor load? ->     moet nog
+        #gitstatus up to date met head? ->     moet nog
+        strip.show()
+    e1 = scheduler.enter(10, 1, SetStatus, ('check',))
 
 def imgMerge (orImg,newImg,frame):
     widthNewImg,heigthNewImg = newImg.size
@@ -110,9 +134,13 @@ class LightSlave(threading.Thread):
                         #clear all LEDs
                         for y in range (1,200):
                             strip.setPixelColor(y, Color(0,0,0))
+                        SetStatus('check')
                         strip.show()    
                         pi_pwm.ChangeDutyCycle(0)
                     frame+=1
+            else:
+                SetStatus('check')
+                strip.show()
 
 class SoundSlave(threading.Thread):
     def __init__(self):
@@ -125,7 +153,6 @@ class SoundSlave(threading.Thread):
                 self.command = soundQueue.get()
                 comWords = self.command.split(",")
                 soundFile=comWords[1]
-                #print("command->"+soundFile)
                 sound = mixer.Sound(soundFile)
                 volume=float(comWords[2])
                 sound.set_volume(volume) 
@@ -178,10 +205,11 @@ def start():
 
 if __name__ == '__main__':
     start()
-
+    #set scheduler for statuscheck
+    e1 = scheduler.enter(10, 1, SetStatus, ('check',))
+    threading.Thread(target=scheduler.run).start()
     while 1:
         try:
-            #comList.append(raw_input("s/i,file,volume(,time)>"))
             com = raw_input("s/i,file,volume(,time)>")
             comWords = com.split(",")
         except Exception as e:
@@ -189,11 +217,9 @@ if __name__ == '__main__':
         try:
             #wait
             if len(comWords)>3: #dan is er time ingegeven
-                #print("time="+comWords[3])
                 E = WaitSlave(comWords[3],com)
                 E.setDaemon(True)
                 E.start()
-                #waitQueue.put(com)
             #sound
             elif comWords[0]=="s" and len(comWords)>2:
                 soundQueue.put(com)
