@@ -119,6 +119,8 @@ class LightSlave(threading.Thread):
                 else:
                     Beeld=im
                     frame=0
+            else:
+                time.sleep(10)
             #check of tijd verloopt voor nieuwe frame
             elapsed=(time.time()*1000)-starttijd        
             if (Beeld!=None):
@@ -157,6 +159,8 @@ class SoundSlave(threading.Thread):
                 volume=float(comWords[2])
                 sound.set_volume(volume) 
                 mixer.Sound.play(sound)
+            else:
+                time.sleep(10)
                 
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
