@@ -20,7 +20,7 @@ import RPi.GPIO as GPIO
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(20,GPIO.OUT)
-pi_pwm = GPIO.PWM(20,500)
+pi_pwm = GPIO.PWM(20,60)
 pi_pwm.start(0)
 LED_COUNT      = 200     # Number of LED pixels.
 LED_PIN        = 13      # GPIO pin connected to the pixels (18 uses PWM!).
