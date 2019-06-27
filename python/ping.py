@@ -54,17 +54,17 @@ def SetStatus(name):
         r=0;g=50;b=0
         strip.setPixelColor(1, Color(r,g,b))
         #netwerk verbinding
-        r=0;g=0;b=0    
-        code = subprocess.call(["ping", "-n", "1", "192.168.8.1"]) # router -> blauw
-        if code==0:
-            b=120
-        code = subprocess.call(["ping", "-n", "1", "8.8.8.8"]) # internet -> groen
-        if code==0:
-            g=120
-        code = subprocess.call(["ping", "-n", "1", "192.168.8.50"]) # server ->rood
-        if code==0:
-            r=120
-        strip.setPixelColor(2, Color(r,g,b))
+        #r=0;g=0;b=0    
+        #code = subprocess.call(["ping", "-n", "1", "192.168.8.1"]) # router -> blauw
+        #if code==0:
+        #    b=120
+        #code = subprocess.call(["ping", "-n", "1", "8.8.8.8"]) # internet -> groen
+        #if code==0:
+        #    g=120
+        #code = subprocess.call(["ping", "-n", "1", "192.168.8.50"]) # server ->rood
+        #if code==0:
+        #    r=120
+        #strip.setPixelColor(2, Color(r,g,b))
         #processor load? ->     moet nog
         #gitstatus up to date met head? ->     moet nog
         strip.show()
