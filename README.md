@@ -97,3 +97,5 @@ node src/index.js &
 ## Authors
 
 * **Friso Modderman - 404 solutions** - *Initial work* - [adminfriso](https://github.com/adminfriso)
+
+sudo pm2 stop index
