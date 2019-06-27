@@ -6,7 +6,7 @@ module.exports = () => {
   let pyShell = null;
   if (process.env.DEVICE !== 'apple') {
     console.log('starting python');
-    pyShell = new PythonShell('./python/PiMaster3_1.py', {
+    pyShell = new PythonShell('./python/ping.py', {
       mode: 'text',
       // pythonOptions: ['-u'],
       pythonPath: '/usr/bin/python2.7'
