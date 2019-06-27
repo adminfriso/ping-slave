@@ -52,7 +52,7 @@ soundQueue = Queue.Queue()
 def SetStatus(name):
     if (Beeld==None):
         r=0;g=50;b=0
-        strip.setPixelColor(1, Color(r,g,b))
+        strip.setPixelColor(0, Color(r,g,b))
         #netwerk verbinding
         #r=0;g=0;b=0    
         #code = subprocess.call(["ping", "-n", "1", "192.168.8.1"]) # router -> blauw
