@@ -72,9 +72,14 @@ def SetStatus(name):
 
 def imgMerge (orImg,newImg,frame):
     widthNewImg,heigthNewImg = newImg.size
-    big1 = Image.new('RGB', (frame+widthNewImg, 200),0)
+    widthorImg,heigthorImg = orImg.size
+    if (widthorImg<frame+widthNewImg):
+        newWidth=frame+widthNewImg
+    else:
+        newWidth=widthorImg
+    big1 = Image.new('RGB', (newWidth, 200),0)
     big1.paste(orImg,(0,0)) #big1 is nu orImg met zwart er naast
-    big2 = Image.new('RGB', (frame+widthNewImg, 200),0)
+    big2 = Image.new('RGB', (newWidth, 200),0)
     big2.paste(newImg,(frame,0))
     finalImg = ImageChops.lighter(big1, big2)
     return finalImg
