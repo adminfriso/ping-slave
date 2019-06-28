@@ -98,4 +98,11 @@ node src/index.js &
 
 * **Friso Modderman - 404 solutions** - *Initial work* - [adminfriso](https://github.com/adminfriso)
 
-sudo pm2 stop index
+pm2 stopzetten om te testen: sudo pm2 stop index
+
+statusleds: 
+0:groen is python loopt
+1:wit is maximale wifi connectivity
+1:192.168.8.1 router -> blauw
+1:8.8.8.8 internet -> groen
+1:192.168.8.50server ->rood
