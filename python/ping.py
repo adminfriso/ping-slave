@@ -12,10 +12,11 @@ try:
 except:
     from pygame import mixer
 mixer.init()
-# LED & LED strip configuration:
-from neopixel import *
+## import PIL
 from PIL import Image
 from PIL import ImageChops
+# LED & LED strip configuration:
+from neopixel import *
 import RPi.GPIO as GPIO
 GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BCM)
@@ -78,6 +79,7 @@ def imgMerge (orImg,newImg,frame):
     else:
         newWidth=widthorImg
     big1 = Image.new('RGB', (newWidth, 200),0)
+    #print(big1.size)
     big1.paste(orImg,(0,0)) #big1 is nu orImg met zwart er naast
     big2 = Image.new('RGB', (newWidth, 200),0)
     big2.paste(newImg,(frame,0))
@@ -87,7 +89,7 @@ def imgMerge (orImg,newImg,frame):
 def showLeds (im,frame):
     #witte leds
     b,g,r = im.getpixel((frame, 0))
-    r = (b+g+r)/3
+    #r = (b+g+r)/3
     r = gamma8[r]
     L = r*0.39
     pi_pwm.ChangeDutyCycle(L)
@@ -124,6 +126,8 @@ class LightSlave(threading.Thread):
                 else:
                     Beeld=im
                     frame=0
+            else:
+                time.sleep(0.01)
             #check of tijd verloopt voor nieuwe frame
             elapsed=(time.time()*1000)-starttijd        
             if (Beeld!=None):
@@ -139,13 +143,13 @@ class LightSlave(threading.Thread):
                         #clear all LEDs
                         for y in range (1,200):
                             strip.setPixelColor(y, Color(0,0,0))
-                        SetStatus('check')
+                        #SetStatus('check')
                         strip.show()    
                         pi_pwm.ChangeDutyCycle(0)
                     frame+=1
             else:
-                SetStatus('check')
-                strip.show()
+                pass
+
 
 class SoundSlave(threading.Thread):
     def __init__(self):
@@ -162,6 +166,8 @@ class SoundSlave(threading.Thread):
                 volume=float(comWords[2])
                 sound.set_volume(volume) 
                 mixer.Sound.play(sound)
+            else:
+                time.sleep(0.01)
                 
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
@@ -235,4 +241,4 @@ if __name__ == '__main__':
                 print("python, not processable:" + com)
         except Exception as e:
             print(e)
-            
+           
