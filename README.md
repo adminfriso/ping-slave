@@ -106,3 +106,4 @@ statusleds:
 1:192.168.8.1 router -> blauw
 1:8.8.8.8 internet -> groen
 1:192.168.8.50server ->rood
+2:# groen is 0%, rood is 100%
