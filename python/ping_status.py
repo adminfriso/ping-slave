@@ -3,7 +3,8 @@ import threading
 import Queue
 import time
 import sched
-import psutil
+from gpiozero import PWMLED
+from gpiozero import LoadAverage, PingServer
 
 #sound config
 try:
@@ -16,14 +17,13 @@ mixer.init()
 ## import PIL
 from PIL import Image
 from PIL import ImageChops
-# LED & LED strip configuration:
+# white LEDS
+whiteleds=True
+whitepulse=False
+led = PWMLED(20)
+led.value=0
+# addressable LEDS
 from neopixel import *
-import RPi.GPIO as GPIO
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(20,GPIO.OUT)
-pi_pwm = GPIO.PWM(20,60)
-pi_pwm.start(0)
 LED_COUNT      = 200     # Number of LED pixels.
 LED_PIN        = 13      # GPIO pin connected to the pixels (18 uses PWM!).
 LED_FREQ_HZ    = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -42,9 +42,8 @@ gamma8 = [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,
   177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213, 215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 ]
 strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
 strip.begin()
-pi_pwm.start(0)
 #init global variables
-fps=60;frame=0;starttijd=0;Beeld=None
+fps=25;frame=0;starttijd=0;Beeld=None
 scheduler = sched.scheduler(time.time, time.sleep)
 
 # thread safe
@@ -53,32 +52,33 @@ soundQueue = Queue.Queue()
 
 def SetStatus(name):
     if (Beeld==None):
-        r=0;g=50;b=0
-        strip.setPixelColor(0, Color(r,g,b))
-        #netwerk verbinding
-        r=0;g=0;b=0
-        try:
-            subprocess.check_output(['ping', '-n', '1', '192.168.8.1'], stderr=subprocess.STDOUT, universal_newlines=True)  # router -> blauw
-            b=120
-        except subprocess.CalledProcessError:
-            b=0
-        try:
-            subprocess.check_output(['ping', '-n', '1', '8.8.8.8'], stderr=subprocess.STDOUT, universal_newlines=True)  # internet -> groen
-            g=120
-        except subprocess.CalledProcessError:
-            g=0
-        try:
-            subprocess.check_output(['ping', '-n', '1', '192.168.8.50'], stderr=subprocess.STDOUT, universal_newlines=True ) # server ->rood
-            r=120
-        except subprocess.CalledProcessError:
-            r=0
-        strip.setPixelColor(1, Color(r,g,b))
         #processor load
-        cpu = 2.5 * psutil.cpu_percent(interval=None)
-        strip.setPixelColor(2, Color(cpu,255-cpu,0)) # groen is 0%, rood is 100%
+        cpu = int(LoadAverage().value*250)
+        if (cpu>255): cpu=255
+        if (cpu<0):cpu=0
+        cpu = gamma8[cpu]
+        strip.setPixelColor(0, Color(0,cpu,0)) # groen is 100%
+        #netwerk verbinding
+        check = PingServer("192.168.8.1")
+        if (check.value==True):
+            b=120
+        else:
+            b=10
+        check = PingServer("8.8.8.8")
+        if (check.value==True):
+            g=120
+        else:
+            g=10
+        check = PingServer("192.168.8.50")
+        if (check.value==True):
+            r=120
+        else:
+            r=10
+            strip.setPixelColor(1, Color(b,g,r))
+            
         #gitstatus up to date met head? ->     moet nog
         strip.show()
-    e1 = scheduler.enter(10, 1, SetStatus, ('check',))
+    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
 def imgMerge (orImg,newImg,frame):
     widthNewImg,heigthNewImg = newImg.size
@@ -88,7 +88,6 @@ def imgMerge (orImg,newImg,frame):
     else:
         newWidth=widthorImg
     big1 = Image.new('RGB', (newWidth, 200),0)
-    #print(big1.size)
     big1.paste(orImg,(0,0)) #big1 is nu orImg met zwart er naast
     big2 = Image.new('RGB', (newWidth, 200),0)
     big2.paste(newImg,(frame,0))
@@ -97,18 +96,18 @@ def imgMerge (orImg,newImg,frame):
 
 def showLeds (im,frame):
     #witte leds
-    b,g,r = im.getpixel((frame, 0))
-    #r = (b+g+r)/3
-    r = gamma8[r]
-    L = r*0.39
-    pi_pwm.ChangeDutyCycle(L)
+    if whiteleds:        
+        b,g,r = im.getpixel((frame, 0))
+        r = gamma8[r]
+        L = r*0.39
+        led.value=L/255
     #addressables
-    for y in range (1,im.height):
+    for y in range (2,im.height):
         b,g,r = im.getpixel((frame, y))
         r=gamma8[r]
         g=gamma8[g]
         b=gamma8[b]
-        strip.setPixelColor(y, Color(r,g,b))
+        strip.setPixelColor(y, Color(b,g,r))
     strip.show()
 
 class LightSlave(threading.Thread):
@@ -129,13 +128,14 @@ class LightSlave(threading.Thread):
                 duration=float(comWords[2])
                 im = Image.open(imgFile)
                 im = im.convert("RGB") 
-                im = im.resize((int(duration*fps),200),5) #PIL.Image.LANCZOS
+                im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
                 if (Beeld!=None): 
                     Beeld = imgMerge(Beeld,im,frame)
                 else:
                     Beeld=im
                     frame=0
             else:
+                strip.show()
                 time.sleep(0.01)
             #check of tijd verloopt voor nieuwe frame
             elapsed=(time.time()*1000)-starttijd        
@@ -150,11 +150,10 @@ class LightSlave(threading.Thread):
                     #aan einde van Image alles reset
                         Beeld=None
                         #clear all LEDs
-                        for y in range (1,200):
+                        for y in range (2,200):
                             strip.setPixelColor(y, Color(0,0,0))
-                        #SetStatus('check')
                         strip.show()    
-                        pi_pwm.ChangeDutyCycle(0)
+                        led.value=0
                     frame+=1
             else:
                 pass
@@ -175,7 +174,10 @@ class SoundSlave(threading.Thread):
                 volume=float(comWords[2])
                 sound.set_volume(volume) 
                 mixer.Sound.play(sound)
+                if whitepulse=True:
+                        led.blink(0.1, 0, 1, 0.5, 1, True)
             else:
+                strip.show()
                 time.sleep(0.01)
                 
 class WaitSlave(threading.Thread):
@@ -240,6 +242,16 @@ if __name__ == '__main__':
                 E = WaitSlave(comWords[3],com)
                 E.setDaemon(True)
                 E.start()
+            #check for white commands
+            elif comWords[0]=="w":
+                if com=="whiteoff":
+                    whiteleds=False
+                elif com=="whiteon":
+                    whiteleds=True
+                elif com=="whitepulseoff":
+                    whitepulse=False
+                elif com=="whitepulseon":
+                    whitepulse=True
             #sound
             elif comWords[0]=="s" and len(comWords)>2:
                 soundQueue.put(com)
@@ -251,5 +263,7 @@ if __name__ == '__main__':
         except Exception as e:
             print(e)
             
+
+
 
 
