@@ -3,6 +3,7 @@ import threading
 import Queue
 import time
 import sched
+#import psutil
 
 #sound config
 try:
@@ -55,18 +56,26 @@ def SetStatus(name):
         r=0;g=50;b=0
         strip.setPixelColor(0, Color(r,g,b))
         #netwerk verbinding
-        #r=0;g=0;b=0    
-        #code = subprocess.call(["ping", "-n", "1", "192.168.8.1"]) # router -> blauw
-        #if code==0:
-        #    b=120
-        #code = subprocess.call(["ping", "-n", "1", "8.8.8.8"]) # internet -> groen
-        #if code==0:
-        #    g=120
-        #code = subprocess.call(["ping", "-n", "1", "192.168.8.50"]) # server ->rood
-        #if code==0:
-        #    r=120
-        #strip.setPixelColor(2, Color(r,g,b))
-        #processor load? ->     moet nog
+        r=0;g=0;b=0
+        try:
+            subprocess.check_output(['ping', '-n', '1', '192.168.8.1'], stderr=subprocess.STDOUT, universal_newlines=True)  # router -> blauw
+            b=120
+        except subprocess.CalledProcessError:
+            b=0
+        try:
+            subprocess.check_output(['ping', '-n', '1', '8.8.8.8'], stderr=subprocess.STDOUT, universal_newlines=True)  # internet -> groen
+            g=120
+        except subprocess.CalledProcessError:
+            g=0
+        try:
+            subprocess.check_output(['ping', '-n', '1', '192.168.8.50'], stderr=subprocess.STDOUT, universal_newlines=True ) # server ->rood
+            r=120
+        except subprocess.CalledProcessError:
+            r=0
+        strip.setPixelColor(1, Color(r,g,b))
+        #processor load
+        #cpu = 2.5 * psutil.cpu_percent(interval=None)
+        #strip.setPixelColor(2, Color(cpu,255-cpu,0)) # groen is 0%, rood is 100%
         #gitstatus up to date met head? ->     moet nog
         strip.show()
     e1 = scheduler.enter(10, 1, SetStatus, ('check',))
@@ -127,6 +136,7 @@ class LightSlave(threading.Thread):
                     Beeld=im
                     frame=0
             else:
+                strip.show()
                 time.sleep(0.01)
             #check of tijd verloopt voor nieuwe frame
             elapsed=(time.time()*1000)-starttijd        
@@ -141,7 +151,7 @@ class LightSlave(threading.Thread):
                     #aan einde van Image alles reset
                         Beeld=None
                         #clear all LEDs
-                        for y in range (1,200):
+                        for y in range (2,200):
                             strip.setPixelColor(y, Color(0,0,0))
                         #SetStatus('check')
                         strip.show()    
@@ -167,6 +177,7 @@ class SoundSlave(threading.Thread):
                 sound.set_volume(volume) 
                 mixer.Sound.play(sound)
             else:
+                strip.show()
                 time.sleep(0.01)
                 
 class WaitSlave(threading.Thread):
@@ -241,4 +252,6 @@ if __name__ == '__main__':
                 print("python, not processable:" + com)
         except Exception as e:
             print(e)
-           
+            
+
+
