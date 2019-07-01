@@ -1,3 +1,13 @@
+#commands:
+#E,whiteoff
+#E,whiteon
+#E,whitepulseoff
+#E,whitepulseon
+#E,statusoff
+#E,statuson
+#s,path,volume(0-1),wait(epoch-millis)
+#i,path,duration(secs,0-...),wait(epoch-millis)
+
 import subprocess
 import threading
 import Queue
@@ -41,21 +51,26 @@ gamma8 = [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,
 strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
 strip.begin()
 #init global variables
-fps=25;frame=0;starttijd=0;Beeld=None
+frame=0;starttijd=0;Beeld=None;led0=Color(0,0,0);led1=Color(0,0,0)
 scheduler = sched.scheduler(time.time, time.sleep)
+#init start
+fps=25
+whiteleds=True
+whitepulse=False
+status=True
 
 # thread safe
 lightQueue = Queue.Queue()
 soundQueue = Queue.Queue()
 
 def SetStatus(name):
-    if (Beeld==None):
+    if Beeld==None and status==True :
         #processor load
         cpu = int(LoadAverage().value*250)
         if (cpu>255): cpu=255
         if (cpu<0):cpu=0
         cpu = gamma8[cpu]
-        strip.setPixelColor(0, Color(0,cpu,0)) # groen is 100%
+        led0 = Color(0,cpu,0) # groen is 100%
         #netwerk verbinding
         check = PingServer("192.168.8.1")
         if (check.value==True):
@@ -72,9 +87,11 @@ def SetStatus(name):
             r=120
         else:
             r=10
-            strip.setPixelColor(1, Color(b,g,r))
+        led1 = Color(b,g,r)
             
         #gitstatus up to date met head? ->     moet nog
+        strip.setPixelColor(0, led0)
+        strip.setPixelColor(1, led1)
         strip.show()
     e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
@@ -94,18 +111,21 @@ def imgMerge (orImg,newImg,frame):
 
 def showLeds (im,frame):
     #witte leds
-    b,g,r = im.getpixel((frame, 0))
-    #r = (b+g+r)/3
-    r = gamma8[r]
-    L = r*0.39
-    led.value=L/255
+    if whiteleds:        
+        b,g,r = im.getpixel((frame, 0))
+        r = gamma8[r]
+        L = r*0.39
+        led.value=L/255
     #addressables
-    for y in range (2,im.height):
+    for y in range (0,im.height):
         b,g,r = im.getpixel((frame, y))
         r=gamma8[r]
         g=gamma8[g]
         b=gamma8[b]
         strip.setPixelColor(y, Color(b,g,r))
+    if status:
+        strip.setPixelColor(0, led0)
+        strip.setPixelColor(1, led1)
     strip.show()
 
 class LightSlave(threading.Thread):
@@ -148,8 +168,11 @@ class LightSlave(threading.Thread):
                     #aan einde van Image alles reset
                         Beeld=None
                         #clear all LEDs
-                        for y in range (2,200):
+                        for y in range (0,200):
                             strip.setPixelColor(y, Color(0,0,0))
+                        if status:
+                            strip.setPixelColor(0, led0)
+                            strip.setPixelColor(1, led1)
                         strip.show()    
                         led.value=0
                     frame+=1
@@ -172,6 +195,8 @@ class SoundSlave(threading.Thread):
                 volume=float(comWords[2])
                 sound.set_volume(volume) 
                 mixer.Sound.play(sound)
+                if whitepulse=True:
+                        led.blink(0.1, 0, 1, 0.5, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
             else:
                 strip.show()
                 time.sleep(0.01)
@@ -238,6 +263,20 @@ if __name__ == '__main__':
                 E = WaitSlave(comWords[3],com)
                 E.setDaemon(True)
                 E.start()
+            #check for Effect commands
+            elif comWords[0]=="E":
+                if com=="E,whiteoff":
+                    whiteleds=False
+                elif com=="E,whiteon":
+                    whiteleds=True
+                elif com=="E,whitepulseoff":
+                    whitepulse=False
+                elif com=="E,whitepulseon":
+                    whitepulse=True
+                elif com=="E,statusoff":
+                    status=False
+                elif com=="E,statuson":
+                    status=True
             #sound
             elif comWords[0]=="s" and len(comWords)>2:
                 soundQueue.put(com)
