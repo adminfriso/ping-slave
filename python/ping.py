@@ -195,7 +195,7 @@ class SoundSlave(threading.Thread):
                 volume=float(comWords[2])
                 sound.set_volume(volume) 
                 mixer.Sound.play(sound)
-                if whitepulse=True:
+                if whitepulse==True:
                         led.blink(0.1, 0, 1, 0.5, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
             else:
                 strip.show()
