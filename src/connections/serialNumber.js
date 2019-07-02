@@ -17,6 +17,7 @@ module.exports = () => {
 
   services.socket.on('serial-number', function () {
     // Receive mac address via execute command and return it on the socket
+
     exec(command, (err, stdout, stderr) => {
       if (err) {
         // node couldn't execute the command
@@ -24,10 +25,17 @@ module.exports = () => {
       }
       const regResult = new RegExp(pattern).exec(stdout);
       // send serial number to server
-      let response = {
-        serialNumber: regResult[1],
-      };
-      services.socket.emit('serial-number', response);
+      exec('git rev-parse --short HEAD', (err, stdoutGit, stderrGit) => {
+        if (err) {
+          // node couldn't execute the command
+          return;
+        }
+        let response = {
+          serialNumber: regResult[1],
+          gitVersionNumber: stdoutGit
+        };
+        services.socket.emit('serial-number', response);
+      });
       // the *entire* stdout and stderr (buffered)
       // console.log(`stdout: ${stdout}`);
       // console.log(`stderr: ${stderr}`);

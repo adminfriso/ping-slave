@@ -4,15 +4,20 @@ module.exports = () => {
   // initialize python
   let { PythonShell } = require('python-shell');
   let pyShell = null;
-  if (process.env.DEVICE !== 'apple') {
-    console.log('starting python');
-    pyShell = new PythonShell('./python/ping.py', {
-      mode: 'text',
-      // pythonOptions: ['-u'],
-      pythonPath: '/usr/bin/python2.7'
-    });
-    console.log('started python');
-  }
+  console.log('starting python');
+  pyShell = new PythonShell('./python/ping.py', {
+    mode: 'text',
+    // pythonOptions: ['-u'],
+    pythonPath: '/usr/bin/python2.7'
+  }).end(callback => {
+    console.log('--------------------------------------------------------');
+    console.log('receiving a breaking callback from python');
+    console.log('--------------------------------------------------------');
+    console.log(callback);
+    console.log('--------------------------------------------------------');
+
+  });
+  console.log('started python');
   // pyShell.end((err, exitCode, exitSignal) => {
   //   console.log('python exited with:');
   //   console.log('error:');
