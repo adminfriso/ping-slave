@@ -55,8 +55,8 @@ frame=0;starttijd=0;Beeld=None;led0=Color(0,0,0);led1=Color(0,0,0)
 scheduler = sched.scheduler(time.time, time.sleep)
 #init start
 fps=25
-whiteleds=True
-whitepulse=False
+whiteleds=False
+whitepulse=True
 status=True
 
 # thread safe
@@ -196,7 +196,7 @@ class SoundSlave(threading.Thread):
                 sound.set_volume(volume) 
                 mixer.Sound.play(sound)
                 if whitepulse==True:
-                        led.blink(0.1, 0, 1, 0.5, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
+                        led.blink(0, 0, 0.3, 0.6, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
             else:
                 strip.show()
                 time.sleep(0.01)
