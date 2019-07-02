@@ -55,8 +55,8 @@ frame=0;starttijd=0;Beeld=None;led0=Color(0,0,0);led1=Color(0,0,0)
 scheduler = sched.scheduler(time.time, time.sleep)
 #init start
 fps=25
-whiteleds=True
-whitepulse=False
+whiteleds=False
+whitepulse=True
 status=True
 
 # thread safe
