@@ -244,7 +244,32 @@ def start():
         thread.start()
 
     print ("Going on!")
+    
+def updatePython():
+    print("updating python...")
+    os.system("git fetch")
+    strip.fill((100,0,0))
+    strip.show()
+    os.system("git add .")
+    strip.fill((0,100,0))
+    strip.show()
+    os.system("git reset HEAD --hard")
+    strip.fill((0,0,100))
+    strip.show()
+    os.system("git pull")
+    strip.fill((100,100,100))
+    strip.show()
+    os.system("npm install")
+    led.blink(0.1, 0, 1, 0.5, 1, True)
+    os.system("sudo reboot")
 
+def updateApt():
+    print("updating apt...")
+    os.system("apt update && apt upgrade -y")
+    strip.fill((0,100,0))
+    strip.show()
+    os.system("sudo reboot")
+    led.blink(0.1, 0, 1, 0.5, 1, True)
 
 if __name__ == '__main__':
     start()
@@ -283,31 +308,12 @@ if __name__ == '__main__':
             #image
             elif comWords[0]=="i" and len(comWords)>2:
                 lightQueue.put(com)
+            #update
             elif comWords[0]=="u":
                 if com=="update python":
-                    print("updating python...")
-                    os.system("git fetch")
-                    strip.fill((100,0,0))
-                    strip.show()
-                    os.system("git add .")
-                    strip.fill((0,100,0))
-                    strip.show()
-                    os.system("git reset HEAD --hard")
-                    strip.fill((0,0,100))
-                    strip.show()
-                    os.system("git pull")
-                    strip.fill((100,100,100))
-                    strip.show()
-                    os.system("npm install")
-                    led.blink(0.1, 0, 1, 0.5, 1, True)
-                    os.system("sudo reboot")
+                    updatePython()
                 elif com=="update apt":
-                    print("updating apt...")
-                    os.system("apt update && apt upgrade -y")
-                    strip.fill((0,100,0))
-                    strip.show()
-                    os.system("sudo reboot")
-                    led.blink(0.1, 0, 1, 0.5, 1, True)
+                    updateApt()
             else:
                 print("python, not processable:" + com)
         except Exception as e:
