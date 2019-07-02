@@ -9,11 +9,11 @@ module.exports = () => {
     mode: 'text',
     // pythonOptions: ['-u'],
     pythonPath: '/usr/bin/python2.7'
-  }).end(callback => {
+  }).on('error', function (error) {
     console.log('--------------------------------------------------------');
     console.log('receiving a breaking callback from python');
     console.log('--------------------------------------------------------');
-    console.log(callback);
+    console.log(error);
     console.log('--------------------------------------------------------');
 
   });
