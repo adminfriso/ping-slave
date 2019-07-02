@@ -55,8 +55,8 @@ frame=0;starttijd=0;Beeld=None;led0=Color(0,0,0);led1=Color(0,0,0)
 scheduler = sched.scheduler(time.time, time.sleep)
 #init start
 fps=25
-whiteleds=False
-whitepulse=True
+whiteleds=True
+whitepulse=False
 status=True
 
 # thread safe
@@ -196,7 +196,7 @@ class SoundSlave(threading.Thread):
                 sound.set_volume(volume) 
                 mixer.Sound.play(sound)
                 if whitepulse==True:
-                        led.blink(0, 0, 0.3, 0.6, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
+                        led.blink(0.1, 0, 1, 0.5, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
             else:
                 strip.show()
                 time.sleep(0.01)
@@ -244,7 +244,32 @@ def start():
         thread.start()
 
     print ("Going on!")
+    
+def updatePython():
+    print("updating python...")
+    os.system("git fetch")
+    strip.fill((100,0,0))
+    strip.show()
+    os.system("git add .")
+    strip.fill((0,100,0))
+    strip.show()
+    os.system("git reset HEAD --hard")
+    strip.fill((0,0,100))
+    strip.show()
+    os.system("git pull")
+    strip.fill((100,100,100))
+    strip.show()
+    os.system("npm install")
+    led.blink(0.1, 0, 1, 0.5, 1, True)
+    os.system("sudo reboot")
 
+def updateApt():
+    print("updating apt...")
+    os.system("apt update && apt upgrade -y")
+    strip.fill((0,100,0))
+    strip.show()
+    os.system("sudo reboot")
+    led.blink(0.1, 0, 1, 0.5, 1, True)
 
 if __name__ == '__main__':
     start()
@@ -283,6 +308,12 @@ if __name__ == '__main__':
             #image
             elif comWords[0]=="i" and len(comWords)>2:
                 lightQueue.put(com)
+            #update
+            elif comWords[0]=="u":
+                if com=="update python":
+                    updatePython()
+                elif com=="update apt":
+                    updateApt()
             else:
                 print("python, not processable:" + com)
         except Exception as e:
