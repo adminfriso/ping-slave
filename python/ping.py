@@ -262,7 +262,7 @@ def updatePython():
     os.system("git pull")
     strip.setPixelColor(y, Color(100,0,100))
     strip.show()
-    os.system("npm install")
+    os.system("npm ci")
     led.blink(0.1, 0, 1, 0.5, 1, True)
     os.system("sudo reboot")
 
