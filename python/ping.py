@@ -247,6 +247,8 @@ def start():
     
 def updatePython():
     print("updating python...")
+    strip.fill((100,100,0))
+    strip.show()
     os.system("git fetch")
     strip.fill((100,0,0))
     strip.show()
