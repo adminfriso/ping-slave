@@ -246,7 +246,19 @@ def start():
 
     print ("Going on!")
     
+def stop():
+    c = LightSlave()
+    s = SoundSlave()
+    
+    threads = [c, s]
+
+    for thread in threads:
+        thread.stop()
+        
+    print ("Stopping processes")
+    
 def updatePython():
+    stop()
     print("updating python...")
     strip.setPixelColor(2, Color(100,0,0))
     strip.show()
@@ -268,6 +280,7 @@ def updatePython():
     os.system("sudo reboot")
 
 def updateApt():
+    stop()
     print("updating apt...")
     os.system("apt update && apt upgrade -y")
     strip.setPixelColor(2, Color(100,0,0))
@@ -324,6 +337,7 @@ if __name__ == '__main__':
         except Exception as e:
             print(e)
             
+
 
 
 
