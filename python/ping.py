@@ -197,7 +197,7 @@ class SoundSlave(threading.Thread):
                 sound.set_volume(volume) 
                 mixer.Sound.play(sound)
                 if whitepulse==True:
-                        led.blink(0.1, 0, 1, 0.5, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
+                        led.blink(0, 0, 0.1, 0.3, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
             else:
                 strip.show()
                 time.sleep(0.01)
@@ -248,31 +248,34 @@ def start():
     
 def updatePython():
     print("updating python...")
-    strip.setPixelColor(y, Color(100,0,0))
+    strip.setPixelColor(2, Color(100,0,0))
     strip.show()
     os.system("git fetch")
-    strip.setPixelColor(y, Color(0,100,0))
+    strip.setPixelColor(2, Color(0,100,0))
     strip.show()
     os.system("git add .")
-    strip.setPixelColor(y, Color(0,0,100))
+    strip.setPixelColor(2, Color(0,0,100))
     strip.show()
     os.system("git reset HEAD --hard")
-    strip.setPixelColor(y, Color(100,100,100))
+    strip.setPixelColor(2, Color(100,100,100))
     strip.show()
     os.system("git pull")
-    strip.setPixelColor(y, Color(100,0,100))
+    strip.setPixelColor(2, Color(100,0,100))
     strip.show()
     os.system("npm ci")
     led.blink(0.1, 0, 1, 0.5, 1, True)
+    time.sleep(3)
     os.system("sudo reboot")
 
 def updateApt():
     print("updating apt...")
     os.system("apt update && apt upgrade -y")
-    strip.setPixelColor(y, Color(100,0,0))
+    strip.setPixelColor(2, Color(100,0,0))
     strip.show()
-    os.system("sudo reboot")
     led.blink(0.1, 0, 1, 0.5, 1, True)
+    time.sleep(3)
+    os.system("sudo reboot")
+    
 
 if __name__ == '__main__':
     start()
