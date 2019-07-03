@@ -13,6 +13,7 @@ import threading
 import Queue
 import time
 import sched
+import os
 from gpiozero import PWMLED
 from gpiozero import LoadAverage, PingServer
 
@@ -247,19 +248,19 @@ def start():
     
 def updatePython():
     print("updating python...")
-    strip.fill((100,100,0))
+    strip.setPixelColor(y, Color(100,0,0))
     strip.show()
     os.system("git fetch")
-    strip.fill((100,0,0))
+    strip.setPixelColor(y, Color(0,100,0))
     strip.show()
     os.system("git add .")
-    strip.fill((0,100,0))
+    strip.setPixelColor(y, Color(0,0,100))
     strip.show()
     os.system("git reset HEAD --hard")
-    strip.fill((0,0,100))
+    strip.setPixelColor(y, Color(100,100,100))
     strip.show()
     os.system("git pull")
-    strip.fill((100,100,100))
+    strip.setPixelColor(y, Color(100,0,100))
     strip.show()
     os.system("npm install")
     led.blink(0.1, 0, 1, 0.5, 1, True)
@@ -268,7 +269,7 @@ def updatePython():
 def updateApt():
     print("updating apt...")
     os.system("apt update && apt upgrade -y")
-    strip.fill((0,100,0))
+    strip.setPixelColor(y, Color(100,0,0))
     strip.show()
     os.system("sudo reboot")
     led.blink(0.1, 0, 1, 0.5, 1, True)
@@ -311,11 +312,10 @@ if __name__ == '__main__':
             elif comWords[0]=="i" and len(comWords)>2:
                 lightQueue.put(com)
             #update
-            elif comWords[0]=="u":
-                if com=="update python":
-                    updatePython()
-                elif com=="update apt":
-                    updateApt()
+            elif comWords[0]=="update python":
+                updatePython()
+            elif comWords[0]=="update apt":
+                updateApt()
             else:
                 print("python, not processable:" + com)
         except Exception as e:
