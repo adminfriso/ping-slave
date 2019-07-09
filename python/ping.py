@@ -1,4 +1,5 @@
 #commands:
+#p,time(secs)
 #E,whiteoff
 #E,whiteon
 #E,whitepulseoff
@@ -63,6 +64,9 @@ status=True
 # thread safe
 lightQueue = Queue.Queue()
 soundQueue = Queue.Queue()
+c = LightSlave()
+s = SoundSlave()
+threads = [c,s]
 
 def SetStatus(name):
     if Beeld==None and status==True :
@@ -232,29 +236,32 @@ class WaitSlave(threading.Thread):
         except Exception as e:
             print(e)
 
+class ProbeSlave(threading.Thread):
+    def __init__(self, time):
+        threading.Thread.__init__(self)
+        self.time = time
+        self.command = None
+
+    def run(self):
+        os.system('sudo ifconfig wlan0 promisc')
+        os.system('sudo ifconfig wlan0 down')
+        os.system('sudo iwconfig wlan0 mode monitor')
+        os.system('sudo ifconfig wlan0 up')
+        if int(time)>0:
+            os.system("sudo timeout "+ time +" tcpdump -C 10 -i wlan0 -w /home/pi/probedump"+time.time+".pcap -tttt -e -s 256 type mgt subtype probe-req")
+        else:
+            os.system("tcpdump -C 10 -i wlan0 -w /home/pi/probedump"+time.time+".pcap -tttt -e -s 256 type mgt subtype probe-req")
                 
                 
 def start():
-    c = LightSlave()
-    s = SoundSlave()
-    
-    threads = [c, s]
-
     for thread in threads:
         thread.setDaemon(True)
         thread.start()
-
     print ("Going on!")
     
 def stop():
-    c = LightSlave()
-    s = SoundSlave()
-    
-    threads = [c, s]
-
     for thread in threads:
         thread.stop()
-        
     print ("Stopping processes")
     
 def updatePython():
@@ -332,6 +339,10 @@ if __name__ == '__main__':
                 updatePython()
             elif comWords[0]=="update apt":
                 updateApt()
+            elif comWords[0]=="p":
+                F = ProbeSlave(comWords[1])
+                F.setDaemon(True)
+                F.start()
             else:
                 print("python, not processable:" + com)
         except Exception as e:
