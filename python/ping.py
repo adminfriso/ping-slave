@@ -64,9 +64,7 @@ status=True
 # thread safe
 lightQueue = Queue.Queue()
 soundQueue = Queue.Queue()
-c = LightSlave()
-s = SoundSlave()
-threads = [c,s]
+
 
 def SetStatus(name):
     if Beeld==None and status==True :
@@ -254,10 +252,15 @@ class ProbeSlave(threading.Thread):
                 
                 
 def start():
+    c = LightSlave()
+    s = SoundSlave()
+    threads = [c,s]
+    
     for thread in threads:
         thread.setDaemon(True)
         thread.start()
     print ("Going on!")
+    
     
 def stop():
     for thread in threads:
