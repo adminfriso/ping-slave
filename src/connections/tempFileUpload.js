@@ -5,9 +5,10 @@ const rimraf = require('rimraf');
 rimraf('./storage/temp/*', function () { console.log('removed temp folder content'); });
 
 module.exports = () => {
-    services.socket.on('temp-file-upload', function (file) {
+    console.log('reached temp file upload module.export');
+    services.socket.on('temp-file-upload', (file) => {
       console.log('received something');
-      fs.writeFile("storage/temp" + file.name, file.data, function(err) {
+      fs.writeFile("storage/temp/" + file.name, file.data, function(err) {
             if(err) {
                 services.socket.emit('temp-file-upload', err);
                 return;

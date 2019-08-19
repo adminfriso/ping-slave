@@ -8,7 +8,7 @@ This repo features:
 * Executing commands on the beacon.
 * Return the serial number of the raspberry pi as identification of the beacon for the master project.
 
-## TODO
+## Potential issues and todo's
 * interne wifi antenne uit zetten op slave
 
 ## Raspberry usefull links

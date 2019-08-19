@@ -15,7 +15,7 @@ module.exports = () => {
   }
 
 
-  services.socket.on('serial-number', function () {
+  services.socket.on('serial-number', () => {
     // Receive mac address via execute command and return it on the socket
 
     exec(command, (err, stdout, stderr) => {
