@@ -9,6 +9,7 @@ module.exports = () => {
             }
             let response = {
               success: true,
+              message: "Uploaded file to storage folder.",
             };
             services.socket.emit('file-upload', response);
         });

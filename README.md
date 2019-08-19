@@ -4,9 +4,12 @@ This is the Client side application ran on the beacons used by the ping project.
 It is a node.js server application which will be used as websocket client for the server application, found in the repo [ping-master](https://github.com/adminfriso/ping-master).
 
 This repo features:
-* Receiving files, and store them to the storage folder
+* Receiving files, and store them to the storage or storage/temp folder.
+* Deleting files.
 * Executing commands on the beacon.
 * Return the serial number of the raspberry pi as identification of the beacon for the master project.
+* Return the git version number.
+* Executing python commands on the beacon.
 
 ## Potential issues and todo's
 * interne wifi antenne uit zetten op slave

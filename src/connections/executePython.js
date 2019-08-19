@@ -36,6 +36,7 @@ module.exports = () => {
 
     let response = {
       success: true,
+      message: "Message successfully received by python, executing now.",
     };
 
     services.socket.emit('execute-python', response);

@@ -2,22 +2,32 @@
 const fs = require('fs');
 const rimraf = require('rimraf');
 
-rimraf('./storage/temp/*', function () { console.log('removed temp folder content'); });
+rimraf('./storage/temp/*', function () {
+  console.log('removed temp folder content');
+});
 
 module.exports = () => {
-    console.log('reached temp file upload module.export');
-    services.socket.on('temp-file-upload', (file) => {
-      console.log('received something');
-      fs.writeFile("storage/temp/" + file.name, file.data, function(err) {
-            if(err) {
-                services.socket.emit('temp-file-upload', err);
-                return;
-            }
-            let response = {
-              success: true,
-            };
-            services.socket.emit('temp-file-upload', response);
-        });
+  services.socket.on('temp-file-upload', (file) => {
+    fs.writeFile("storage/temp/" + file.name, file.data, function (err) {
+      if (err) {
+        services.socket.emit('temp-file-upload', err);
+        return;
+      }
+      let response = {
+        success: true,
+        message: "Uploaded file to storage/temp folder.",
+      };
+      services.socket.emit('temp-file-upload', response);
     });
+  });
 
+  services.socket.on('temp-file-delete', () => {
+    rimraf('./storage/temp/*', () => {
+      let response = {
+        success: true,
+        message: "Deleted content of storage/temp folder.",
+      };
+      services.socket.emit('temp-file-delete', response);
+    });
+  });
 };

@@ -9,8 +9,9 @@ module.exports = () => {
         }
         if (command === 'sudo reboot'){
           services.socket.emit('execute-command', {
+            success: true,
             command: "sudo reboot",
-            status: "received but doing an early callback",
+            status: "Received but doing an early callback.",
           });
         }
         exec(command, (err, stdout, stderr) => {
