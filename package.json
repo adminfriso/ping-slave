@@ -18,9 +18,9 @@
   "homepage": "https://github.com/adminfriso/ping-slave#readme",
   "dependencies": {
     "dotenv": "^6.2.0",
-    "python-shell": "^1.0.7",
+    "python-shell": "^1.0.8",
     "requiredir": "^1.0.7",
-    "rimraf": "^2.6.3",
+    "rimraf": "^2.7.1",
     "socket.io-client": "^2.2.0"
   },
   "devDependencies": {
