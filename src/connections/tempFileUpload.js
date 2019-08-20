@@ -2,10 +2,6 @@
 const fs = require('fs');
 const rimraf = require('rimraf');
 
-rimraf('./storage/temp/*', function () {
-  console.log('removed temp folder content');
-});
-
 module.exports = () => {
   services.socket.on('temp-file-upload', (file) => {
     fs.writeFile("storage/temp/" + file.name, file.data, function (err) {
@@ -22,6 +18,7 @@ module.exports = () => {
   });
 
   services.socket.on('temp-file-delete', () => {
+    console.log('removed temp folder content');
     rimraf('./storage/temp/*', () => {
       let response = {
         success: true,
