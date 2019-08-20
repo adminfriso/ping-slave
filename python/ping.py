@@ -64,10 +64,6 @@ status=True
 # thread safe
 lightQueue = Queue.Queue()
 soundQueue = Queue.Queue()
-c = LightSlave()
-s = SoundSlave()
-threads = [c,s]
-
 
 def SetStatus(name):
     if Beeld==None and status==True :
@@ -253,7 +249,9 @@ class ProbeSlave(threading.Thread):
         else:
             os.system("tcpdump -C 10 -i wlan0 -w /home/pi/probedump"+time.time+".pcap -tttt -e -s 256 type mgt subtype probe-req")
 
-
+c = LightSlave()
+s = SoundSlave()
+threads = [c,s]
 def start():
     for thread in threads:
         thread.setDaemon(True)
