@@ -124,7 +124,7 @@ def showLeds (im,frame):
         r=gamma8[r]
         g=gamma8[g]
         b=gamma8[b]
-        strip.setPixelColor(y, Color(b,g,r))
+        strip.setPixelColor(y, Color(r,g,b))
     if status:
         strip.setPixelColor(0, led0)
         strip.setPixelColor(1, led1)
