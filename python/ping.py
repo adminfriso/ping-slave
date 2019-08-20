@@ -94,7 +94,7 @@ def SetStatus(name):
         else:
             r=10
         led1 = Color(b,g,r)
-            
+
         #gitstatus up to date met head? ->     moet nog
         strip.setPixelColor(0, led0)
         strip.setPixelColor(1, led1)
@@ -117,7 +117,7 @@ def imgMerge (orImg,newImg,frame):
 
 def showLeds (im,frame):
     #witte leds
-    if whiteleds:        
+    if whiteleds:
         b,g,r = im.getpixel((frame, 0))
         r = gamma8[r]
         L = r*0.39
@@ -151,9 +151,9 @@ class LightSlave(threading.Thread):
                 imgFile=comWords[1]
                 duration=float(comWords[2])
                 im = Image.open(imgFile)
-                im = im.convert("RGB") 
+                im = im.convert("RGB")
                 im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
-                if (Beeld!=None): 
+                if (Beeld!=None):
                     Beeld = imgMerge(Beeld,im,frame)
                 else:
                     Beeld=im
@@ -162,7 +162,7 @@ class LightSlave(threading.Thread):
                 strip.show()
                 time.sleep(0.01)
             #check of tijd verloopt voor nieuwe frame
-            elapsed=(time.time()*1000)-starttijd        
+            elapsed=(time.time()*1000)-starttijd
             if (Beeld!=None):
                 if (elapsed>(1000/fps)):
                     starttijd=time.time()*1000;elapsed=0
@@ -179,7 +179,7 @@ class LightSlave(threading.Thread):
                         if status:
                             strip.setPixelColor(0, led0)
                             strip.setPixelColor(1, led1)
-                        strip.show()    
+                        strip.show()
                         led.value=0
                     frame+=1
             else:
@@ -199,14 +199,14 @@ class SoundSlave(threading.Thread):
                 soundFile=comWords[1]
                 sound = mixer.Sound(soundFile)
                 volume=float(comWords[2])
-                sound.set_volume(volume) 
+                sound.set_volume(volume)
                 mixer.Sound.play(sound)
                 if whitepulse==True:
                         led.blink(0, 0, 0.1, 0.3, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
             else:
                 strip.show()
                 time.sleep(0.01)
-                
+
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
         threading.Thread.__init__(self)
@@ -252,38 +252,38 @@ class ProbeSlave(threading.Thread):
             os.system("sudo timeout "+ time +" tcpdump -C 10 -i wlan0 -w /home/pi/probedump"+time.time+".pcap -tttt -e -s 256 type mgt subtype probe-req")
         else:
             os.system("tcpdump -C 10 -i wlan0 -w /home/pi/probedump"+time.time+".pcap -tttt -e -s 256 type mgt subtype probe-req")
-                
-                
-def start(): 
+
+
+def start():
     for thread in threads:
         thread.setDaemon(True)
         thread.start()
     print ("Going on!")
-    
-    
+
+
 def stop():
     for thread in threads:
         thread.stop()
     print ("Stopping processes")
-    
+
 def updatePython():
     stop()
     print("updating python...")
     strip.setPixelColor(2, Color(100,0,0))
     strip.show()
-    os.system("cd /home/pi/ping-slave && sudo git fetch")
+    os.system("cd /home/pi/ping-slave && su pi && git fetch")
     strip.setPixelColor(2, Color(0,100,0))
     strip.show()
-    os.system("cd /home/pi/ping-slave && sudo git add .")
+    os.system("cd /home/pi/ping-slave && su pi && git add .")
     strip.setPixelColor(2, Color(0,0,100))
     strip.show()
-    os.system("cd /home/pi/ping-slave && sudo git reset HEAD --hard")
+    os.system("cd /home/pi/ping-slave && su pi && git reset HEAD --hard")
     strip.setPixelColor(2, Color(100,100,100))
     strip.show()
-    os.system("cd /home/pi/ping-slave && sudo git pull")
+    os.system("cd /home/pi/ping-slave && su pi && git pull")
     strip.setPixelColor(2, Color(100,0,100))
     strip.show()
-    os.system("cd /home/pi/ping-slave && sudo npm ci")
+    os.system("cd /home/pi/ping-slave && su pi && npm ci")
     led.blink(0.1, 0, 1, 0.5, 1, True)
     time.sleep(3)
     os.system("sudo reboot")
@@ -297,7 +297,7 @@ def updateApt():
     led.blink(0.1, 0, 1, 0.5, 1, True)
     time.sleep(3)
     os.system("sudo reboot")
-    
+
 
 if __name__ == '__main__':
     start()
@@ -349,7 +349,7 @@ if __name__ == '__main__':
                 print("python, not processable:" + com)
         except Exception as e:
             print(e)
-            
+
 
 
 
