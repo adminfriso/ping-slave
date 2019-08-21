@@ -72,7 +72,7 @@ def SetStatus(name):
         if (cpu>255): cpu=255
         if (cpu<0):cpu=0
         cpu = gamma8[cpu]
-        led0 = Color(0,cpu,0) # groen is 100%
+        led0 = Color(0,cpu,255-cpu) # groen is 100%
         #netwerk verbinding
         check = PingServer("192.168.8.1")
         if (check.value==True):
