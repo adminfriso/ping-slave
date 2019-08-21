@@ -9,6 +9,8 @@
 #s,path,volume(0-1),wait(epoch-millis)
 #i,path,duration(secs,0-...),wait(epoch-millis)
 
+led2 = Color(255,0,0) # version led#3
+
 import subprocess
 import threading
 import Queue
@@ -94,6 +96,7 @@ def SetStatus(name):
         #gitstatus up to date met head? ->     moet nog
         strip.setPixelColor(0, led0)
         strip.setPixelColor(1, led1)
+        strip.setPixelColor(2, led2)
         strip.show()
     e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
@@ -128,6 +131,7 @@ def showLeds (im,frame):
     if status:
         strip.setPixelColor(0, led0)
         strip.setPixelColor(1, led1)
+        strip.setPixelColor(2, led2)
     strip.show()
 
 class LightSlave(threading.Thread):
@@ -175,6 +179,7 @@ class LightSlave(threading.Thread):
                         if status:
                             strip.setPixelColor(0, led0)
                             strip.setPixelColor(1, led1)
+                            strip.setPixelColor(2, led2)
                         strip.show()
                         led.value=0
                     frame+=1
