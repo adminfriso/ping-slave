@@ -9,7 +9,7 @@
 #s,path,volume(0-1),wait(epoch-millis)
 #i,path,duration(secs,0-...),wait(epoch-millis)
 
-led2 = Color(255,0,0) # version led#3
+
 
 import subprocess
 import threading
@@ -62,6 +62,7 @@ fps=25
 whiteleds=False
 whitepulse=True
 status=True
+led2 = Color(255,0,0) # version led#3
 
 # thread safe
 lightQueue = Queue.Queue()
