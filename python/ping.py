@@ -8,7 +8,7 @@
 #E,statuson
 #s,path,volume(0-1),wait(epoch-millis)
 #i,path,duration(secs,0-...),wait(epoch-millis)
-
+#Color(b,g,r)
 
 
 import subprocess
@@ -62,7 +62,7 @@ fps=25
 whiteleds=False
 whitepulse=True
 status=True
-led2 = Color(255,0,0) # version led#3
+led2 = Color(255,255,0) # version led#3
 
 # thread safe
 lightQueue = Queue.Queue()
@@ -128,7 +128,7 @@ def showLeds (im,frame):
         r=gamma8[r]
         g=gamma8[g]
         b=gamma8[b]
-        strip.setPixelColor(y, Color(r,g,b))
+        strip.setPixelColor(y, Color(b,g,r))
     if status:
         strip.setPixelColor(0, led0)
         strip.setPixelColor(1, led1)
