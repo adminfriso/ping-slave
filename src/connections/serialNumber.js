@@ -30,11 +30,25 @@ module.exports = () => {
           // node couldn't execute the command
           return;
         }
-        let response = {
-          serialNumber: regResult[1],
-          gitVersionNumber: stdoutGit
-        };
-        services.socket.emit('serial-number', response);
+        exec("ifconfig wlan0 | grep inet | awk '{ print $2 }'", (err, stdoutWLan0, stderrWLan0) => {
+          if (err) {
+            // node couldn't execute the command
+            return;
+          }
+          exec("ifconfig wlan1 | grep inet | awk '{ print $2 }'", (err, stdoutWLan1, stderrWLan1) => {
+            if (err) {
+              // node couldn't execute the command
+              return;
+            }
+            let response = {
+              serialNumber: regResult[1],
+              gitVersionNumber: stdoutGit,
+              wLan0: stdoutWLan0,
+              wLan1: stdoutWLan1,
+            };
+            services.socket.emit('serial-number', response);
+          });
+        });
       });
       // the *entire* stdout and stderr (buffered)
       // console.log(`stdout: ${stdout}`);
