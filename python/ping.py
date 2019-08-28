@@ -219,7 +219,7 @@ class WaitSlave(threading.Thread):
     def run(self):
         comWords = self.com.split(",")
         #time
-        tijd=nt(self.wait)
+        tijd=int(self.wait)
         print(self.com + " waiting:"+tijd-(time.time()*1000))
         try:
             while ((time.time()*1000)<tijd):
