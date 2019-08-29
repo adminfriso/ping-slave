@@ -224,7 +224,7 @@ class WaitSlave(threading.Thread):
         try:
             while ((int(time.time()*1000))<tijd):
                 time.sleep(0.001)
-            print("WaitSlave waited, but now running:" + self.com)
+            #print("WaitSlave waited, but now running:" + self.com)
             try:
                 #sound
                 if comWords[0]=="s":
