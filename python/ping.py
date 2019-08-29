@@ -220,9 +220,9 @@ class WaitSlave(threading.Thread):
         comWords = self.com.split(",")
         #time
         tijd=int(self.wait)
-        print(self.com + " waiting:"+tijd-(time.time()*1000))
+        #print(self.com + " waiting:"+tijd-(int(time.time()*1000)))
         try:
-            while ((time.time()*1000)<tijd):
+            while ((int(time.time()*1000))<tijd):
                 time.sleep(0.001)
             print("WaitSlave waited, but now running:" + self.com)
             try:
