@@ -223,7 +223,7 @@ class WaitSlave(threading.Thread):
         print(self.com + " waiting:"+tijd-(time.time()*1000))
         try:
             while ((time.time()*1000)<tijd):
-                pass
+                time.sleep(0.001)
             print("WaitSlave waited, but now running:" + self.com)
             try:
                 #sound
