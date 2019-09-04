@@ -126,7 +126,7 @@ def showLeds (im,frame):
         led.value=L/255
     #addressables
     for y in range (0,im.height):
-        b,g,r = im.getpixel((frame, y))
+        r,g,b = im.getpixel((frame, y))
         r=gamma8[r]
         g=gamma8[g]
         b=gamma8[b]
