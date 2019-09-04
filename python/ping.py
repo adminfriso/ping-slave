@@ -164,6 +164,8 @@ class LightSlave(threading.Thread):
                 duration=float(comWords[2])
                 im = Image.open(imgFile)
                 im = im.convert("RGB")
+		if (fadeout==True):
+		    im=imgFadeOut(im)
                 im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
                 if (Beeld!=None):
                     Beeld = imgMerge(Beeld,im,frame)
@@ -375,6 +377,10 @@ if __name__ == '__main__':
                     status=False
                 elif com=="E,statuson":
                     status=True
+		elif com=="E,fadeouton":
+                    fadeout=True
+                elif com=="E,fadeoutoff":
+                    fadeout=False
             #sound
             elif comWords[0]=="s" and len(comWords)>2:
                 soundQueue.put(com)
