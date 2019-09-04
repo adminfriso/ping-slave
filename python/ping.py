@@ -64,6 +64,7 @@ fps=25
 whiteleds=False
 whitepulse=True
 status=True
+fadeout=True
 led2 = Color(0,255,0) # version led#3
 
 # thread safe
