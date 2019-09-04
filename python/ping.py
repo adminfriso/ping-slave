@@ -222,15 +222,16 @@ class WaveSlave(threading.Thread):
         self.down = down
 
     def run(self):
+        sound.set_volume(0)
         tijd=int(self.wait)
         while ((int(time.time()*1000))<tijd):
             time.sleep(0.001)
         for i in range (0,100):
-            mixer.set_volume(i/100)
+            sound.set_volume(i/100)
             time.sleep((int(self.up)/1000)/100)
         time.sleep(int(self.stay)/1000)
         for i in range (0,100):
-            mixer.set_volume(1-(i/100))
+            sound.set_volume(1-(i/100))
             time.sleep((int(self.down)/1000)/100)    
             
 
