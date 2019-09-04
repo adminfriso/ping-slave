@@ -212,30 +212,30 @@ class SoundSlave(threading.Thread):
                 time.sleep(0.01)
                 
 class WaveSlave(threading.Thread):
-    def __init__(self,tijd,up,stay,down):
+    def __init__(self,file,tijd,up,stay,down):
         threading.Thread.__init__(self)
-        self.command = None
+        self.file = file
         self.tijd = tijd
         self.up = up
         self.stay = stay
         self.down = down
 
     def run(self):
-        volume=0
-        subprocess.call(["amixer", "-D", "pulse", "sset", "Master", str(volume)+"%"])
+        sound = mixer.Sound(self.file)
+        sound.set_volume(0)
+        mixer.Sound.play(sound)
+        if whitepulse==True:
+            led.blink(0, 0, 0.1, 0.3, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
         tijd=int(self.wait)
         while ((int(time.time()*1000))<tijd):
             time.sleep(0.001)
         for i in range (0,100):
-            volume=i
-            subprocess.call(["amixer", "-D", "pulse", "sset", "Master", str(volume)+"%"])
+            sound.set_volume(i/100)
             time.sleep((int(self.up)/1000)/100)
         time.sleep(int(self.stay)/1000)
         for i in range (0,100):
-            volume=1-i
-            subprocess.call(["amixer", "-D", "pulse", "sset", "Master", str(volume)+"%"])            
-            time.sleep((int(self.down)/1000)/100)     
-            
+            sound.set_volume(1-(i/100))            
+            time.sleep((int(self.down)/1000)/100)    
 
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
