@@ -227,11 +227,11 @@ class WaveSlave(threading.Thread):
             time.sleep(0.001)
         for i in range (0,100):
             mixer.set_volume(i/100)
-            time.sleep((up/1000)/100)
-        time.sleep(stay/1000)
+            time.sleep((int(self.up)/1000)/100)
+        time.sleep(int(self.stay)/1000)
         for i in range (0,100):
             mixer.set_volume(1-(i/100))
-            time.sleep((down/1000)/100)    
+            time.sleep((int(self.down)/1000)/100)    
             
 
 class WaitSlave(threading.Thread):
