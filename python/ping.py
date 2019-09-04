@@ -8,7 +8,7 @@
 #E,statuson
 #s,path,volume(0-1),wait(epoch-millis)
 #i,path,duration(secs,0-...),wait(epoch-millis)
-#W,tijd(epoch-millis),up(milliseconds),stay(milliseconds),down(milliseconds) 
+#W,file,volume,tijd(epoch-millis),up(milliseconds),stay(milliseconds),down(milliseconds) 
 
 #Color=(b,g,r)
 
@@ -212,9 +212,10 @@ class SoundSlave(threading.Thread):
                 time.sleep(0.01)
                 
 class WaveSlave(threading.Thread):
-    def __init__(self,file,tijd,up,stay,down):
+    def __init__(self,file,volume,tijd,up,stay,down):
         threading.Thread.__init__(self)
         self.file = file
+        self.volume = volume
         self.tijd = tijd
         self.up = up
         self.stay = stay
@@ -225,16 +226,16 @@ class WaveSlave(threading.Thread):
         sound.set_volume(0)
         mixer.Sound.play(sound)
         if whitepulse==True:
-            led.blink(0, 0, 0.1, 0.3, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
+            led.blink(int(self.stay), 0, int(self.up), int(self.down), 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
         tijd=int(self.wait)
         while ((int(time.time()*1000))<tijd):
             time.sleep(0.001)
         for i in range (0,100):
-            sound.set_volume(i/100)
+            sound.set_volume(i/100*self.volume)
             time.sleep((int(self.up)/1000)/100)
         time.sleep(int(self.stay)/1000)
-        for i in range (0,100):
-            sound.set_volume(1-(i/100))            
+        for i in range (100,0,-1):
+            sound.set_volume(i/100*self.volume)           
             time.sleep((int(self.down)/1000)/100)    
 
 class WaitSlave(threading.Thread):
@@ -381,7 +382,7 @@ if __name__ == '__main__':
                 F.setDaemon(True)
                 F.start()
             elif comWords[0]=="W":
-                G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],)
+                G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
                 G.setDaemon(True)
                 G.start()
             else:
