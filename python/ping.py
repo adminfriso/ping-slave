@@ -8,7 +8,9 @@
 #E,statuson
 #s,path,volume(0-1),wait(epoch-millis)
 #i,path,duration(secs,0-...),wait(epoch-millis)
-#Color(b,g,r)
+#W,tijd(epoch-millis),up(milliseconds),stay(milliseconds),down(milliseconds) 
+
+#Color=(b,g,r)
 
 
 import subprocess
@@ -209,6 +211,28 @@ class SoundSlave(threading.Thread):
             else:
                 strip.show()
                 time.sleep(0.01)
+                
+class WaveSlave(threading.Thread):
+    def __init__(self,tijd,up,stay,down):
+        threading.Thread.__init__(self)
+        self.command = None
+        self.tijd = tijd
+        self.up = up
+        self.stay = stay
+        self.down = down
+
+    def run(self):
+        tijd=int(self.wait)
+        while ((int(time.time()*1000))<tijd):
+            time.sleep(0.001)
+        for i in range (0,100):
+            mixer.set_volume(i/100)
+            time.sleep(up/100)
+        time.sleep(stay)
+        for i in range (0,100):
+            mixer.set_volume(1-(i/100))
+            time.sleep(down/100)    
+            
 
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
@@ -353,13 +377,12 @@ if __name__ == '__main__':
                 F = ProbeSlave(comWords[1])
                 F.setDaemon(True)
                 F.start()
+            elif comWords[0]=="W":
+                G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],)
+                G.setDaemon(True)
+                G.start()
             else:
                 print("python, not processable:" + com)
         except Exception as e:
             print(e)
-
-
-
-
-
 
