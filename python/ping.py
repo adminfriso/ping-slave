@@ -65,7 +65,7 @@ fps=25
 whiteleds=False
 whitepulse=True
 status=True
-led2 = Color(255,255,0) # version led#3
+led2 = Color(0,0,255) # version led#3
 
 # thread safe
 lightQueue = Queue.Queue()
