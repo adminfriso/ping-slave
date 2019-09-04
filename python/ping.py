@@ -120,7 +120,7 @@ def imgMerge (orImg,newImg,frame):
 def showLeds (im,frame):
     #witte leds
     if whiteleds:
-        b,g,r = im.getpixel((frame, 0))
+        r,g,b = im.getpixel((frame, 0))
         r = gamma8[r]
         L = r*0.39
         led.value=L/255
