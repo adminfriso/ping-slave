@@ -12,7 +12,7 @@
 
 #Color=(b,g,r)
 
-
+from subprocess import call
 import subprocess
 import threading
 import Queue
@@ -222,17 +222,20 @@ class WaveSlave(threading.Thread):
         self.down = down
 
     def run(self):
-        sound.set_volume(0)
+        volume=0
+        call(["amixer", "-D", "pulse", "sset", "Master", str(volume)+"%"])
         tijd=int(self.wait)
         while ((int(time.time()*1000))<tijd):
             time.sleep(0.001)
         for i in range (0,100):
-            sound.set_volume(i/100)
+            volume=i
+            call(["amixer", "-D", "pulse", "sset", "Master", str(volume)+"%"])
             time.sleep((int(self.up)/1000)/100)
         time.sleep(int(self.stay)/1000)
         for i in range (0,100):
-            sound.set_volume(1-(i/100))
-            time.sleep((int(self.down)/1000)/100)    
+            volume=1-i
+            call(["amixer", "-D", "pulse", "sset", "Master", str(volume)+"%"])            
+            time.sleep((int(self.down)/1000)/100)     
             
 
 class WaitSlave(threading.Thread):
