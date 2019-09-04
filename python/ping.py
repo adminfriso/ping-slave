@@ -28,6 +28,7 @@ try:
 except:
     from pygame import mixer
 mixer.init()
+pygame.mixer.set_num_channels(16)#default is 8
 ## import PIL
 from PIL import Image
 from PIL import ImageChops
