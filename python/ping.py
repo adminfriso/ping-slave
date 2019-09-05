@@ -136,11 +136,11 @@ def showLeds (im,frame):
         L = r*0.39
         led.value=L/255
     #addressables
-    widthorim,heigthorim = im.size
-    lastPart=int((2/4)*widthorim)
+    #widthorim,heigthorim = im.size
+    lastPart=int((3/4)*im.width)
     for y in range (0,im.height):
         r,g,b = im.getpixel((frame, y))
-	if fadeout :
+	if (fadeout==True) and (frame>(im.width-lastPart)) :
 		r=int(r-(((frame-lastPart)/(widthorImg-lastPart))*r))
 		g=int(g-(((frame-lastPart)/(widthorImg-lastPart))*g))
 		b=int(b-(((frame-lastPart)/(widthorImg-lastPart))*b))
