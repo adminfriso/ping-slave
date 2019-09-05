@@ -118,16 +118,6 @@ def imgMerge (orImg,newImg,frame):
     finalImg = ImageChops.lighter(big1, big2)
     return finalImg
 
-#def imgFadeOut (orImg):
-#    pixels = orImg.load()
-#    widthorImg,heigthorImg = orImg.size
-#    lastPart=int((1/4)*widthorImg)
-#    for x in range(lastPart, widthorImg):
-#        for y in range(heigthorImg):
-#            r,g,b = pixels[x,y]
-#            pixels[x, y] = (int(r-(((x-lastPart)/(widthorImg-lastPart))*r)),int(g-(((x-lastPart)/(widthorImg-lastPart))*g)),int(b-(((x-lastPart)/(widthorImg-lastPart))*b)))#
-#    return orImg
-
 def showLeds (im,frame):
     #witte leds
     if whiteleds:
@@ -140,10 +130,10 @@ def showLeds (im,frame):
     lastPart=int((3/4)*widthorim)
     for y in range (0,heigthorim):
         r,g,b = im.getpixel((frame, y))
-	if fadeout==True and frame>lastPart :
-		r=int(r-(((frame-lastPart)/(widthorim-lastPart))*float(r)))
-		g=int(g-(((frame-lastPart)/(widthorim-lastPart))*float(g)))
-		b=int(b-(((frame-lastPart)/(widthorim-lastPart))*float(b)))
+#	if fadeout==True and frame>lastPart :
+#		r=int(r-(((frame-lastPart)/(widthorim-lastPart))*float(r)))
+#		g=int(g-(((frame-lastPart)/(widthorim-lastPart))*float(g)))
+#		b=int(b-(((frame-lastPart)/(widthorim-lastPart))*float(b)))
         r=gamma8[r]
         g=gamma8[g]
         b=gamma8[b]
@@ -172,7 +162,7 @@ class LightSlave(threading.Thread):
                 duration=float(comWords[2])
                 im = Image.open(imgFile)
                 im = im.convert("RGB")
-                im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
+                im = im.resize((int(duration*fps/3),200),5) #PI2.Image.LANCZOS
                 if (Beeld!=None):
                     Beeld = imgMerge(Beeld,im,frame)
                 else:
