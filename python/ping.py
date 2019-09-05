@@ -60,7 +60,7 @@ strip.begin()
 frame=0;starttijd=0;Beeld=None;led0=Color(0,0,0);led1=Color(0,0,0)
 scheduler = sched.scheduler(time.time, time.sleep)
 #init start
-fps=25
+fps=25.0
 whiteleds=False
 whitepulse=True
 status=True
@@ -107,7 +107,7 @@ def SetStatus(name):
 def imgMerge (orImg,newImg,frame):
     widthNewImg,heigthNewImg = newImg.size
     widthorImg,heigthorImg = orImg.size
-    if (widthorImg<frame+widthNewImg):
+    if (widthorImg<(frame+widthNewImg)):
         newWidth=frame+widthNewImg
     else:
         newWidth=widthorImg
@@ -193,8 +193,11 @@ class LightSlave(threading.Thread):
                         strip.show()
                         led.value=0
                     frame+=1
+		else:
+			time.sleep(0.001)
+			
             else:
-                pass
+                time.sleep(0.001)
 
 
 class SoundSlave(threading.Thread):
@@ -226,7 +229,7 @@ class WaveSlave(threading.Thread):
         self.tijd = tijd
         self.up = up
         self.stay = stay
-        self.down = down#
+        self.down = down
 
     def run(self):
         sound = mixer.Sound(self.file)
@@ -238,11 +241,11 @@ class WaveSlave(threading.Thread):
         while ((int(time.time()*1000))<tijd):
             time.sleep(0.001)
         for i in range (0,100):
-            sound.set_volume(i/100*self.volume)
+            sound.set_volume((i/100)*float(self.volume))
             time.sleep((int(self.up)/1000)/100)
         time.sleep(int(self.stay)/1000)
-        for i in range (100,0,-1):
-            sound.set_volume(i/100*self.volume)           
+        for i in range (0,100):
+            sound.set_volume((i/(100-i))*float(self.volume))           
             time.sleep((int(self.down)/1000)/100)    
 
 class WaitSlave(threading.Thread):
