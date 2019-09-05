@@ -118,14 +118,14 @@ def imgMerge (orImg,newImg,frame):
     finalImg = ImageChops.lighter(big1, big2)
     return finalImg
 
-#def imgFadeOut (orImg):
-#	widthorImg,heigthorImg = orImg.size
-#	lastPart=(3/4)*widthorImg
-#	for x in range(lastPart, widthorImg):
- #   		for y in range(heigthorImg):
-#		r,g,b = orImg.getpixel((x,y))
-#        		orImg[x, y] = (r-(x-lastPart/widthorImg-lastPart*r),g-(x-lastPart/widthorImg-lastPart*g),b-(x-lastPart/widthorImg-lastPart*b))
-#    return orImg
+def imgFadeOut (orImg):
+   widthorImg,heigthorImg = orImg.size
+   lastPart=(3/4)*widthorImg
+   for x in range(lastPart, widthorImg):
+        for y in range(heigthorImg):
+            r,g,b = orImg.getpixel((x,y))
+            orImg[x, y] = (r-(x-lastPart/widthorImg-lastPart*r),g-(x-lastPart/widthorImg-lastPart*g),b-(x-lastPart/widthorImg-lastPart*b))
+   return orImg
 
 def showLeds (im,frame):
     #witte leds
@@ -165,8 +165,8 @@ class LightSlave(threading.Thread):
                 duration=float(comWords[2])
                 im = Image.open(imgFile)
                 im = im.convert("RGB")
-		#if (fadeout==True):
-		#    im=imgFadeOut(im)
+                if (fadeout==True):
+                    im=imgFadeOut(im)
                 im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
                 if (Beeld!=None):
                     Beeld = imgMerge(Beeld,im,frame)
