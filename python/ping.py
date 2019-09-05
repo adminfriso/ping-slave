@@ -162,7 +162,7 @@ class LightSlave(threading.Thread):
                 duration=float(comWords[2])
                 im = Image.open(imgFile)
                 im = im.convert("RGB")
-                im = im.resize((int(duration*fps/3),200),5) #PI2.Image.LANCZOS
+                im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
                 if (Beeld!=None):
                     Beeld = imgMerge(Beeld,im,frame)
                 else:
