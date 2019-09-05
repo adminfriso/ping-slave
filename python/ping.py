@@ -98,10 +98,10 @@ def SetStatus(name):
         led1 = Color(b,g,r)
 
         #gitstatus up to date met head? ->     moet nog
-        strip.setPixelColor(0, led0)
-        strip.setPixelColor(1, led1)
-        strip.setPixelColor(2, led2)
-        strip.show()
+        #strip.setPixelColor(0, led0)
+        #strip.setPixelColor(1, led1)
+        #strip.setPixelColor(2, led2)
+        #strip.show()
     e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
 def imgMerge (orImg,newImg,frame):
