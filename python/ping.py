@@ -119,13 +119,14 @@ def imgMerge (orImg,newImg,frame):
     return finalImg
 
 def imgFadeOut (orImg):
-   widthorImg,heigthorImg = orImg.size
-   lastPart=(3/4)*widthorImg
-   for x in range(lastPart, widthorImg):
+    pixels = orImg.load()
+    widthorImg,heigthorImg = orImg.size
+    lastPart=int((1/4)*widthorImg)
+    for x in range(lastPart, widthorImg):
         for y in range(heigthorImg):
-            r,g,b = orImg.getpixel((x,y))
-            orImg[x, y] = (r-(x-lastPart/widthorImg-lastPart*r),g-(x-lastPart/widthorImg-lastPart*g),b-(x-lastPart/widthorImg-lastPart*b))
-   return orImg
+            r,g,b = pixels[x,y]
+            pixels[x, y] = (int(r-(((x-lastPart)/(widthorImg-lastPart))*r)),int(g-(((x-lastPart)/(widthorImg-lastPart))*g)),int(b-(((x-lastPart)/(widthorImg-lastPart))*b)))#
+    return orImg
 
 def showLeds (im,frame):
     #witte leds
