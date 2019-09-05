@@ -141,9 +141,9 @@ def showLeds (im,frame):
     for y in range (0,heigthorim):
         r,g,b = im.getpixel((frame, y))
 	if fadeout==True and frame>lastPart :
-		r=int(r-(((frame-lastPart)/(widthorImg-lastPart))*float(r)))
-		g=int(g-(((frame-lastPart)/(widthorImg-lastPart))*float(g)))
-		b=int(b-(((frame-lastPart)/(widthorImg-lastPart))*float(b)))
+		r=int(r-(((frame-lastPart)/(widthorim-lastPart))*float(r)))
+		g=int(g-(((frame-lastPart)/(widthorim-lastPart))*float(g)))
+		b=int(b-(((frame-lastPart)/(widthorim-lastPart))*float(b)))
         r=gamma8[r]
         g=gamma8[g]
         b=gamma8[b]
