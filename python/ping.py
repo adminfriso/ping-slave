@@ -140,7 +140,7 @@ def showLeds (im,frame):
     lastPart=int((3/4)*im.width)
     for y in range (0,im.height):
         r,g,b = im.getpixel((frame, y))
-	if (fadeout==True) and (frame>(im.width-lastPart)) :
+	if (fadeout==True) and (frame>lastPart) :
 		r=int(r-(((frame-lastPart)/(widthorImg-lastPart))*r))
 		g=int(g-(((frame-lastPart)/(widthorImg-lastPart))*g))
 		b=int(b-(((frame-lastPart)/(widthorImg-lastPart))*b))
