@@ -221,19 +221,22 @@ class SoundSlave(threading.Thread):
                 strip.show()
                 time.sleep(0.01)
                 
-class WaveSlave(threading.Thread):
-    def __init__(self,file,volume,tijd,up,stay,down):
-        threading.Thread.__init__(self)
-        self.file = file
-        self.volume = volume
-        self.tijd = tijd
-        self.up = up
-        self.stay = stay
-        self.down = down
-	self.command = None
-
-    def run(self):
+def WaveSlave():
 	led.blink(0, 0, 0.1, 0.3, 1, True)
+		
+		#class WaveSlave(threading.Thread):
+#    def __init__(self,file,volume,tijd,up,stay,down):
+#        threading.Thread.__init__(self)
+#        self.file = file
+#        self.volume = volume
+#        self.tijd = tijd
+#        self.up = up
+#        self.stay = stay
+#        self.down = down
+#	self.command = None
+
+#    def run(self):
+#	led.blink(0, 0, 0.1, 0.3, 1, True)
 #        sound = mixer.Sound(self.file)
 #        sound.set_volume(0.07)
 #        mixer.Sound.play(sound)
