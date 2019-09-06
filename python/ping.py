@@ -233,20 +233,20 @@ class WaveSlave(threading.Thread):
 
     def run(self):
         sound = mixer.Sound(self.file)
-        sound.set_volume(0.5)
+        sound.set_volume(0.07)
         mixer.Sound.play(sound)
-        if whitepulse==True:
-            led.blink(int(self.stay), 0, int(self.up), int(self.down), 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
-        tijd=int(self.tijd)
-        while ((int(time.time()*1000))<tijd):
-            time.sleep(0.001)
-        for i in range (0,100):
-            sound.set_volume((i/100)*float(self.volume))
-            time.sleep((int(self.up)/1000)/100)
-        time.sleep(int(self.stay)/1000)
-        for i in range (0,100):
-            sound.set_volume((i/(100-i))*float(self.volume))           
-            time.sleep((int(self.down)/1000)/100)    
+#        if whitepulse==True:
+#            led.blink(int(self.stay), 0, int(self.up), int(self.down), 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
+#        tijd=int(self.tijd)
+#        while ((int(time.time()*1000))<tijd):
+#            time.sleep(0.001)
+#        for i in range (0,100):
+#            sound.set_volume((i/100)*float(self.volume))
+#            time.sleep((int(self.up)/1000)/100)
+#        time.sleep(int(self.stay)/1000)
+#        for i in range (0,100):
+#            sound.set_volume((i/(100-i))*float(self.volume))           
+#            time.sleep((int(self.down)/1000)/100)    
 
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
