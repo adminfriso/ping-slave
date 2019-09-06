@@ -98,10 +98,13 @@ def SetStatus(name):
         led1 = Color(b,g,r)
 
         #gitstatus up to date met head? ->     moet nog
-        #strip.setPixelColor(0, led0)
-        #strip.setPixelColor(1, led1)
-        #strip.setPixelColor(2, led2)
-        #strip.show()
+        strip.setPixelColor(3, led0)
+        strip.setPixelColor(4, led1)
+        strip.setPixelColor(5, led2)
+        strip.setPixelColor(13, led2)
+	strip.setPixelColor(14, led1)
+	strip.setPixelColor(15, led0)
+        strip.show()
     e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
 def imgMerge (orImg,newImg,frame):
@@ -139,9 +142,12 @@ def showLeds (im,frame):
         b=gamma8[b]
         strip.setPixelColor(y, Color(b,g,r))
     if status:
-        strip.setPixelColor(0, led0)
-        strip.setPixelColor(1, led1)
-        strip.setPixelColor(2, led2)
+        strip.setPixelColor(3, led0)
+        strip.setPixelColor(4, led1)
+        strip.setPixelColor(5, led2)
+        strip.setPixelColor(13, led2)
+	strip.setPixelColor(14, led1)
+	strip.setPixelColor(15, led0)
     strip.show()
 
 class LightSlave(threading.Thread):
@@ -187,9 +193,12 @@ class LightSlave(threading.Thread):
                         for y in range (0,200):
                             strip.setPixelColor(y, Color(0,0,0))
                         if status:
-                            strip.setPixelColor(0, led0)
-                            strip.setPixelColor(1, led1)
-                            strip.setPixelColor(2, led2)
+                            strip.setPixelColor(3, led0)
+                            strip.setPixelColor(4, led1)
+                            strip.setPixelColor(5, led2)
+                            strip.setPixelColor(13, led2)
+	                    strip.setPixelColor(14, led1)  
+                            strip.setPixelColor(15, led0)
                         strip.show()
                         led.value=0
                     frame+=1
