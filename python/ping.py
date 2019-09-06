@@ -223,6 +223,21 @@ class SoundSlave(threading.Thread):
                 
 def WaveSlave():
 	led.blink(0, 0, 0.1, 0.3, 1, True)
+        sound = mixer.Sound(file)
+        sound.set_volume(0.07)
+        mixer.Sound.play(sound)
+        if whitepulse==True:
+            led.blink(int(stay), 0, int(up), int(down), 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
+        tijd=int(tijd)
+        while ((int(time.time()*1000))<tijd):
+            time.sleep(0.001)
+        for i in range (0,100):
+            sound.set_volume((i/100)*float(volume))
+            time.sleep((int(up)/1000)/100)
+        time.sleep(int(stay)/1000)
+        for i in range (0,100):
+            sound.set_volume((i/(100-i))*float(volume))           
+            time.sleep((int(down)/1000)/100)   
 		
 		#class WaveSlave(threading.Thread):
 #    def __init__(self,file,volume,tijd,up,stay,down):
@@ -236,7 +251,6 @@ def WaveSlave():
 #	self.command = None
 
 #    def run(self):
-#	led.blink(0, 0, 0.1, 0.3, 1, True)
 #        sound = mixer.Sound(self.file)
 #        sound.set_volume(0.07)
 #        mixer.Sound.play(sound)
@@ -363,6 +377,11 @@ if __name__ == '__main__':
             print(e)
         try:
             #wait
+	    elif comWords[0]=="W":
+		WaveSlave()
+                #G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
+                #G.setDaemon(True)
+                #G.start()
             if len(comWords)>3: #dan is er time ingegeven
                 E = WaitSlave(comWords[3],com)
                 E.setDaemon(True)
@@ -400,11 +419,6 @@ if __name__ == '__main__':
                 F = ProbeSlave(comWords[1])
                 F.setDaemon(True)
                 F.start()
-            elif comWords[0]=="W":
-		WaveSlave()
-                #G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
-                #G.setDaemon(True)
-                #G.start()
             else:
                 print("python, not processable:" + com)
         except Exception as e:
