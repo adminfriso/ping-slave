@@ -222,9 +222,9 @@ class SoundSlave(threading.Thread):
                 time.sleep(0.01)
                 
 def WaveSlave(file,volume,tijd,up,stay,down):
-	stay=float(stay/1000)
-        up=float(up/1000)
-        down=float(down/1000)
+	stay=float(stay)/1000
+        up=float(up)/1000
+        down=float(down)/1000
         sound = mixer.Sound(file)
         sound.set_volume(0.001)
         mixer.Sound.play(sound)
