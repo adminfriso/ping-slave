@@ -395,10 +395,10 @@ if __name__ == '__main__':
                 F = ProbeSlave(comWords[1])
                 F.setDaemon(True)
                 F.start()
-#            elif comWords[0]=="W":
-#                G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
-#                G.setDaemon(True)
-#                G.start()
+            elif comWords[0]=="W":
+                G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
+                G.setDaemon(True)
+                G.start()
             else:
                 print("python, not processable:" + com)
         except Exception as e:
