@@ -233,7 +233,7 @@ class WaveSlave(threading.Thread):
 
     def run(self):
         sound = mixer.Sound(self.file)
-        sound.set_volume(0)
+        sound.set_volume(0.5)
         mixer.Sound.play(sound)
         if whitepulse==True:
             led.blink(int(self.stay), 0, int(self.up), int(self.down), 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
