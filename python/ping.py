@@ -221,7 +221,7 @@ class SoundSlave(threading.Thread):
                 strip.show()
                 time.sleep(0.01)
                 
-def WaveSlave():
+def WaveSlave(file,volume,tijd,up,stay,down):
 	led.blink(0, 0, 0.1, 0.3, 1, True)
         sound = mixer.Sound(file)
         sound.set_volume(0.07)
