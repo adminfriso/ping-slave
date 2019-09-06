@@ -429,6 +429,8 @@ if __name__ == '__main__':
                 F = ProbeSlave(comWords[1])
                 F.setDaemon(True)
                 F.start()
+	    elif comWords[0]=="stop":
+		stop()
             else:
                 print("python, not processable:" + com)
         except Exception as e:
