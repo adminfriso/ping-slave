@@ -377,12 +377,12 @@ if __name__ == '__main__':
             print(e)
         try:
             #wait
-	    elif comWords[0]=="W":
+	    if comWords[0]=="W":
 		WaveSlave()
                 #G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
                 #G.setDaemon(True)
                 #G.start()
-            if len(comWords)>3: #dan is er time ingegeven
+            elif len(comWords)>3: #dan is er time ingegeven
                 E = WaitSlave(comWords[3],com)
                 E.setDaemon(True)
                 E.start()
