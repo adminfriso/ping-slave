@@ -227,7 +227,7 @@ def WaveSlave(file,volume,tijd,up,stay,down):
         sound.set_volume(0.001)
         mixer.Sound.play(sound)
         if whitepulse==True:
-            led.blink(int(stay), 0, int(up), int(down), 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
+            led.blink(int(stay/1000), 0, int(up/1000), int(down/1000), 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
         tijd=int(tijd)
         while ((int(time.time()*1000))<tijd):
             time.sleep(0.001)
