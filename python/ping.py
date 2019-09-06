@@ -378,7 +378,7 @@ if __name__ == '__main__':
         try:
             #wait
 	    if comWords[0]=="W":
-		WaveSlave()
+		WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
                 #G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
                 #G.setDaemon(True)
                 #G.start()
