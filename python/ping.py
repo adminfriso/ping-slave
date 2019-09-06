@@ -230,6 +230,7 @@ class WaveSlave(threading.Thread):
         self.up = up
         self.stay = stay
         self.down = down
+	self.command = None
 
     def run(self):
 	led.blink(0, 0, 0.1, 0.3, 1, True)
