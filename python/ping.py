@@ -242,13 +242,13 @@ def WaveSlave(file,volume,tijd,up,stay,down):
             time.sleep(0.001)
 	if whitepulse==True:
             led.blink(stay, 0, up, down, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
-        for i in range (0,100):
-            sound.set_volume((i/100)*float(volume))
-            time.sleep(up/100)
+        for i in range (0,10):
+            sound.set_volume((i/10)*float(volume))
+            time.sleep(up/10)
         time.sleep(stay)
-        for i in range (0,100):
-            sound.set_volume((i/(100-i))*float(volume))           
-            time.sleep(down/100)   
+        for i in range (0,10):
+            sound.set_volume((i/(10-i))*float(volume))           
+            time.sleep(down/10)   
 		
 #class WaveSlave(threading.Thread):
 #    def __init__(self,file,volume,tijd,up,stay,down):
