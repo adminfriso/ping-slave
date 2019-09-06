@@ -131,9 +131,9 @@ def showLeds (im,frame):
     for y in range (0,heigthorim):
         r,g,b = im.getpixel((frame, y))
 	if fadeout==True and frame>lastPart :
-		r=int(((frame-lastPart)/(widthorim-lastPart))*float(r))
-		g=int(((frame-lastPart)/(widthorim-lastPart))*float(g))
-		b=int(((frame-lastPart)/(widthorim-lastPart))*float(b))
+		r=int(((widthorim-frame)/(widthorim-lastPart))*float(r))
+		g=int(((widthorim-frame)/(widthorim-lastPart))*float(g))
+		b=int(((widthorim-frame)/(widthorim-lastPart))*float(b))
         r=gamma8[r]
         g=gamma8[g]
         b=gamma8[b]
@@ -241,33 +241,32 @@ def WaveSlave(file,volume,tijd,up,stay,down):
             sound.set_volume((i/(100-i))*float(volume))           
             time.sleep(down/100)   
 		
-		#class WaveSlave(threading.Thread):
+#class WaveSlave(threading.Thread):
 #    def __init__(self,file,volume,tijd,up,stay,down):
 #        threading.Thread.__init__(self)
 #        self.file = file
-#        self.volume = volume
-#        self.tijd = tijd
-#        self.up = up
-#        self.stay = stay
-#        self.down = down
+#        self.volume = float(volume)
+#        self.tijd = int(tijd)
+#        self.up = float(up)/1000
+#        self.stay = float(stay)/1000
+#        self.down = float(down)/1000
 #	self.command = None
 
 #    def run(self):
 #        sound = mixer.Sound(self.file)
-#        sound.set_volume(0.07)
+#        sound.set_volume(0.001)
 #        mixer.Sound.play(sound)
 #        if whitepulse==True:
-#            led.blink(int(self.stay), 0, int(self.up), int(self.down), 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
-#        tijd=int(self.tijd)
+#            led.blink(stay, 0, up, down, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
 #        while ((int(time.time()*1000))<tijd):
 #            time.sleep(0.001)
 #        for i in range (0,100):
 #            sound.set_volume((i/100)*float(self.volume))
-#            time.sleep((int(self.up)/1000)/100)
-#        time.sleep(int(self.stay)/1000)
+#            time.sleep(self.up/100)
+#        time.sleep(self.stay/1000)
 #        for i in range (0,100):
 #            sound.set_volume((i/(100-i))*float(self.volume))           
-#            time.sleep((int(self.down)/1000)/100)    
+#            time.sleep(self.down/100)    
 
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
