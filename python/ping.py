@@ -207,7 +207,7 @@ class LightSlave(threading.Thread):
                             strip.setPixelColor(4, led1)
                             strip.setPixelColor(5, led2)
                             strip.setPixelColor(13, led2)
-                        strip.setPixelColor(14, led1)  
+                            strip.setPixelColor(14, led1)  
                             strip.setPixelColor(15, led0)
                         strip.show()
                         led.value=0
