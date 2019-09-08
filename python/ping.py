@@ -65,6 +65,7 @@ whiteleds=False
 whitepulse=True
 status=True
 fadeout=True
+fadein=True
 led2 = Color(0,255,0) # version led#3
 
 # thread safe
@@ -102,8 +103,8 @@ def SetStatus(name):
         strip.setPixelColor(4, led1)
         strip.setPixelColor(5, led2)
         strip.setPixelColor(13, led2)
-	strip.setPixelColor(14, led1)
-	strip.setPixelColor(15, led0)
+        strip.setPixelColor(14, led1)
+        strip.setPixelColor(15, led0)
         strip.show()
     e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
@@ -127,27 +128,36 @@ def showLeds (im,frame):
         r,g,b = im.getpixel((frame, 0))
         r = gamma8[r]
         L = r*0.39
-        led.value=L/255
+        led.value=L/255.0
     #addressables
     widthorim,heigthorim = im.size
-    lastPart=int((3/4)*widthorim)
+    lastPart=(3.0/4.0)*float(widthorim)
+    firstPart=(1.0/4.0)*float(widthorim)
     for y in range (0,heigthorim):
         r,g,b = im.getpixel((frame, y))
-	if fadeout==True and frame>lastPart :
-		r=int(((widthorim-frame)/(widthorim-lastPart))*float(r))
-		g=int(((widthorim-frame)/(widthorim-lastPart))*float(g))
-		b=int(((widthorim-frame)/(widthorim-lastPart))*float(b))
-        r=gamma8[r]
-        g=gamma8[g]
-        b=gamma8[b]
+        #fadeIN
+        if fadein==True and frame<firstPart :
+            ratio=float(frame)/float(firstPart)
+            r=ratio*float(r)
+            g=ratio*float(g)
+            b=ratio*float(b)
+        #fadeOUT
+        if fadeout==True and frame>lastPart :
+            ratio=float(widthorim-frame)/float(widthorim-lastPart)
+            r=ratio*float(r)
+            g=ratio*float(g)
+            b=ratio*float(b)
+        r=gamma8[int(r)]
+        g=gamma8[int(g)]
+        b=gamma8[int(b)]
         strip.setPixelColor(y, Color(b,g,r))
     if status:
         strip.setPixelColor(3, led0)
         strip.setPixelColor(4, led1)
         strip.setPixelColor(5, led2)
         strip.setPixelColor(13, led2)
-	strip.setPixelColor(14, led1)
-	strip.setPixelColor(15, led0)
+    strip.setPixelColor(14, led1)
+    strip.setPixelColor(15, led0)
     strip.show()
 
 class LightSlave(threading.Thread):
@@ -197,14 +207,13 @@ class LightSlave(threading.Thread):
                             strip.setPixelColor(4, led1)
                             strip.setPixelColor(5, led2)
                             strip.setPixelColor(13, led2)
-	                    strip.setPixelColor(14, led1)  
+                        strip.setPixelColor(14, led1)  
                             strip.setPixelColor(15, led0)
                         strip.show()
                         led.value=0
                     frame+=1
-		else:
-			time.sleep(0.001)
-			
+                else:
+                    time.sleep(0.001)
             else:
                 time.sleep(0.001)
 
@@ -231,25 +240,27 @@ class SoundSlave(threading.Thread):
                 time.sleep(0.01)
                 
 def WaveSlave(file,volume,tijd,up,stay,down):
-	tijd=int(tijd)
-	stay=float(stay)/1000
-        up=float(up)/1000
-        down=float(down)/1000
-        sound = mixer.Sound(file)
-        sound.set_volume(0.001)
-        mixer.Sound.play(sound)
-        while ((int(time.time()*1000))<tijd):
-            time.sleep(0.001)
-	if whitepulse==True:
+    tijd=int(tijd)
+    stay=float(stay)/1000
+    up=float(up)/1000
+    down=float(down)/1000
+    sound = mixer.Sound(file)
+    sound.set_volume(0.001)
+    mixer.Sound.play(sound)
+    while ((int(time.time()*1000))<tijd):
+        time.sleep(0.001)
+    if whitepulse==True:
             led.blink(stay, 0, up, down, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
-        for i in range (0,10):
-            sound.set_volume((i/10)*float(volume))
-            time.sleep(up/10)
-        time.sleep(stay)
-        for i in range (0,10):
-            sound.set_volume((i/(10-i))*float(volume))           
-            time.sleep(down/10)   
-		
+    for i in range (0,100):
+        sound.set_volume((float(i)/100)*float(volume))
+        time.sleep(up/100)
+    time.sleep(stay)
+    for i in range (0,100):
+        j=100-i
+        sound.set_volume((float(j)/100)*float(volume))           
+        time.sleep(down/100)
+    sound.set_volume(0)   
+        
 #class WaveSlave(threading.Thread):
 #    def __init__(self,file,volume,tijd,up,stay,down):
 #        threading.Thread.__init__(self)
@@ -259,7 +270,7 @@ def WaveSlave(file,volume,tijd,up,stay,down):
 #        self.up = float(up)/1000
 #        self.stay = float(stay)/1000
 #        self.down = float(down)/1000
-#	self.command = None
+#   self.command = None
 
 #    def run(self):
 #        sound = mixer.Sound(self.file)
@@ -387,11 +398,13 @@ if __name__ == '__main__':
             print(e)
         try:
             #wait
-	    if comWords[0]=="W":
-		WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
+            if comWords[0]=="W":
+                WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
                 #G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
                 #G.setDaemon(True)
                 #G.start()
+            elif comWords[0]=="X":
+                stop()
             elif len(comWords)>3: #dan is er time ingegeven
                 E = WaitSlave(comWords[3],com)
                 E.setDaemon(True)
@@ -410,9 +423,13 @@ if __name__ == '__main__':
                     status=False
                 elif com=="E,statuson":
                     status=True
-		elif com=="E,fadeouton":
+                elif com=="E,fadeouton":
                     fadeout=True
                 elif com=="E,fadeoutoff":
+                    fadeout=False
+                elif com=="E,fadeinon":
+                    fadeout=True
+                elif com=="E,fadeinoff":
                     fadeout=False
             #sound
             elif comWords[0]=="s" and len(comWords)>2:
@@ -429,10 +446,9 @@ if __name__ == '__main__':
                 F = ProbeSlave(comWords[1])
                 F.setDaemon(True)
                 F.start()
-	    elif comWords[0]=="stop":
-		stop()
             else:
                 print("python, not processable:" + com)
         except Exception as e:
             print(e)
+
 
