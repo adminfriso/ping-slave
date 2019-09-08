@@ -234,7 +234,7 @@ class SoundSlave(threading.Thread):
                 sound.set_volume(volume)
                 mixer.Sound.play(sound)
                 if whitepulse==True:
-                        led.blink(0, 0, 0.1, 0.3, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
+                    led.blink(0, 0, 0.1, 0.3, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
             else:
                 strip.show()
                 time.sleep(0.01)
