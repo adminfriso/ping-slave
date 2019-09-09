@@ -239,54 +239,56 @@ class SoundSlave(threading.Thread):
                 strip.show()
                 time.sleep(0.01)
                 
-def WaveSlave(file,volume,tijd,up,stay,down):
-    tijd=int(tijd)
-    stay=float(stay)/1000
-    up=float(up)/1000
-    down=float(down)/1000
-    sound = mixer.Sound(file)
-    sound.set_volume(0.001)
-    mixer.Sound.play(sound)
-    while ((int(time.time()*1000))<tijd):
-        time.sleep(0.001)
-    if whitepulse==True:
-            led.blink(stay, 0, up, down, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
-    for i in range (0,100):
-        sound.set_volume((float(i)/100)*float(volume))
-        time.sleep(up/100)
-    time.sleep(stay)
-    for i in range (0,100):
-        j=100-i
-        sound.set_volume((float(j)/100)*float(volume))           
-        time.sleep(down/100)
-    sound.set_volume(0)   
-        
-#class WaveSlave(threading.Thread):
-#    def __init__(self,file,volume,tijd,up,stay,down):
-#        threading.Thread.__init__(self)
-#        self.file = file
-#        self.volume = float(volume)
-#        self.tijd = int(tijd)
-#        self.up = float(up)/1000
-#        self.stay = float(stay)/1000
-#        self.down = float(down)/1000
-#   self.command = None
-
-#    def run(self):
-#        sound = mixer.Sound(self.file)
-#        sound.set_volume(0.001)
-#        mixer.Sound.play(sound)
-#        if whitepulse==True:
+#def WaveSlave(file,volume,tijd,up,stay,down):
+#    tijd=int(tijd)
+#    stay=float(stay)/1000
+#    up=float(up)/1000
+#    down=float(down)/1000
+#    sound = mixer.Sound(file)
+#    sound.set_volume(0.001)
+#    mixer.Sound.play(sound)
+#    while ((int(time.time()*1000))<tijd):
+#        time.sleep(0.001)
+#    if whitepulse==True:
 #            led.blink(stay, 0, up, down, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
-#        while ((int(time.time()*1000))<tijd):
-#            time.sleep(0.001)
-#        for i in range (0,100):
-#            sound.set_volume((i/100)*float(self.volume))
-#            time.sleep(self.up/100)
-#        time.sleep(self.stay/1000)
-#        for i in range (0,100):
-#            sound.set_volume((i/(100-i))*float(self.volume))           
-#            time.sleep(self.down/100)    
+#    for i in range (0,100):
+#        sound.set_volume((float(i)/100)*float(volume))
+#        time.sleep(up/100)
+#    time.sleep(stay)
+#    for i in range (0,100):
+#        j=100-i
+#        sound.set_volume((float(j)/100)*float(volume))           
+#        time.sleep(down/100)
+#    sound.set_volume(0)   
+        
+class WaveSlave(threading.Thread):
+    def __init__(self,file,volume,tijd,up,stay,down):
+        threading.Thread.__init__(self)
+        self.file = file
+        self.volume = float(volume)
+        self.tijd = int(tijd)
+        self.up = float(up)/1000
+        self.stay = float(stay)/1000
+        self.down = float(down)/1000
+        self.command = None
+
+    def run(self):
+        sound = mixer.Sound(self.file)
+        sound.set_volume(0.001)
+        mixer.Sound.play(sound)
+        while ((int(time.time()*1000))<tijd):
+            time.sleep(0.001)
+        if whitepulse==True:
+            led.blink(stay, 0, up, down, 1, True) #ontime, offtime, fadeintime, fade out time, n-times, in background
+        for i in range (0,100):
+            sound.set_volume((float(i)/100)*float(volume))
+            time.sleep(up/100)
+        time.sleep(stay)
+        for i in range (0,100):
+            j=100-i
+            sound.set_volume((float(j)/100)*float(volume))           
+            time.sleep(down/100)
+        sound.set_volume(0)     
 
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
@@ -399,10 +401,10 @@ if __name__ == '__main__':
         try:
             #wait
             if comWords[0]=="W":
-                WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
-                #G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
-                #G.setDaemon(True)
-                #G.start()
+                #WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
+                G = WaveSlave(comWords[1],comWords[2],comWords[3],comWords[4],comWords[5],comWords[6])
+                G.setDaemon(True)
+                G.start()
             elif comWords[0]=="X":
                 stop()
             elif len(comWords)>3: #dan is er time ingegeven
@@ -450,5 +452,3 @@ if __name__ == '__main__':
                 print("python, not processable:" + com)
         except Exception as e:
             print(e)
-
-
