@@ -7,7 +7,7 @@
 #E,statusoff
 #E,statuson
 #s,path,volume(0-1),wait(epoch-millis)
-#i,path,duration(secs,0-...),wait(epoch-millis)
+#i,path,duration(secs,0-...),wait(epoch-millis) of repeatTrue/repeatFalse
 #W,file,volume,tijd(epoch-millis),up(milliseconds),stay(milliseconds),down(milliseconds) 
 
 #Color=(b,g,r)
@@ -66,7 +66,11 @@ whitepulse=True
 status=True
 fadeout=True
 fadein=True
-led2 = Color(0,255,0) # version led#3
+repeat=False
+repeatFile=""
+repeatDuration=0
+repeatFlip=False
+led2 = Color(255,0,255) # version led#3
 
 # thread safe
 lightQueue = Queue.Queue()
@@ -120,6 +124,10 @@ def imgMerge (orImg,newImg,frame):
     big2 = Image.new('RGB', (newWidth, 200),0)
     big2.paste(newImg,(frame,0))
     finalImg = ImageChops.lighter(big1, big2)
+    return finalImg
+
+def imgFlip(orImg):
+    finalImg = orImg.transpose(PIL.Image.FLIP_LEFT_RIGHT)
     return finalImg
 
 def showLeds (im,frame):
@@ -183,6 +191,17 @@ class LightSlave(threading.Thread):
                 im = Image.open(imgFile)
                 im = im.convert("RGB")
                 im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
+                if repeatFlip:
+                    im=imgFlip(im)
+                #repeat                
+                if comWords.len()>2:
+                    if comWords[3]=="repeatTrue":
+                        File=imgFile
+                        repeatDuration=duration
+                        repeat=True
+                    elif comWords[3]=="repeatFalse":
+                        repeat=False
+                #beeld
                 if (Beeld!=None):
                     Beeld = imgMerge(Beeld,im,frame)
                 else:
@@ -202,33 +221,15 @@ class LightSlave(threading.Thread):
                         showLeds(Beeld,frame)
                     else:
                     #aan einde van Image alles reset
-                        Beeld=None
-                        #clear all LEDs
-#                        if y==3 or y==4 or y==5 or y==13 or y==14 or y==15:
-#                            if status:
-#                                strip.setPixelColor(3, led0)
-#                                strip.setPixelColor(4, led1)
-#                                strip.setPixelColor(5, led2)
-#                                strip.setPixelColor(13, led2)
-#                                strip.setPixelColor(14, led1)
-#                                strip.setPixelColor(15, led0)
-#                            else:
-#                                strip.setPixelColor(y, Color(0,0,0))
-#                        else:        
-#                            strip.setPixelColor(y, Color(0,0,0))
-#                        
-#                        for y in range (0,200):
-#                            strip.setPixelColor(y, Color(0,0,0))
-#                        if status:
-#                            strip.setPixelColor(3, led0)
-#                            strip.setPixelColor(4, led1)
-#                            strip.setPixelColor(5, led2)
-#                            strip.setPixelColor(13, led2)
-#                            strip.setPixelColor(14, led1)  
-#                            strip.setPixelColor(15, led0)
-                            
-                        strip.show()
-                        led.value=0
+                        if repeat==True:
+                            lightQueue.put("i,"+repeatFile+","+str(repeatDuration))
+                            repeatFlip = not repeatFlip
+                        else:
+                            Beeld=None
+                            repeatFlip = False
+                        #clear all LED's?                            
+                        #strip.show()
+                        #led.value=0
                     frame+=1
                 else:
                     time.sleep(0.001)
@@ -306,8 +307,8 @@ class WaveSlave(threading.Thread):
             j=100-i
             sound.set_volume((float(j)/100)*float(self.volume))           
             time.sleep(self.down/100)
-        sound.set_volume(0)     
-
+        sound.set_volume(0)
+        
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
         threading.Thread.__init__(self)
