@@ -150,14 +150,18 @@ def showLeds (im,frame):
         r=gamma8[int(r)]
         g=gamma8[int(g)]
         b=gamma8[int(b)]
-        strip.setPixelColor(y, Color(b,g,r))
-    if status:
-        strip.setPixelColor(3, led0)
-        strip.setPixelColor(4, led1)
-        strip.setPixelColor(5, led2)
-        strip.setPixelColor(13, led2)
-        strip.setPixelColor(14, led1)
-        strip.setPixelColor(15, led0)
+        if y==3 or y==4 or y==5 or y==13 or y==14 or y==15:
+            if status:
+                strip.setPixelColor(3, led0)
+                strip.setPixelColor(4, led1)
+                strip.setPixelColor(5, led2)
+                strip.setPixelColor(13, led2)
+                strip.setPixelColor(14, led1)
+                strip.setPixelColor(15, led0)
+            else:
+                strip.setPixelColor(y, Color(b,g,r))
+        else:        
+            strip.setPixelColor(y, Color(b,g,r))
     strip.show()
 
 class LightSlave(threading.Thread):
@@ -288,7 +292,7 @@ class WaveSlave(threading.Thread):
             j=100-i
             sound.set_volume((float(j)/100)*float(self.volume))           
             time.sleep(self.down/100)
-        sound.set_volume(0)   
+        sound.set_volume(0)     
 
 class WaitSlave(threading.Thread):
     def __init__(self, wait, com):
