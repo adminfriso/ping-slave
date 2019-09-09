@@ -204,28 +204,28 @@ class LightSlave(threading.Thread):
                     #aan einde van Image alles reset
                         Beeld=None
                         #clear all LEDs
-                        if y==3 or y==4 or y==5 or y==13 or y==14 or y==15:
-                            if status:
-                                strip.setPixelColor(3, led0)
-                                strip.setPixelColor(4, led1)
-                                strip.setPixelColor(5, led2)
-                                strip.setPixelColor(13, led2)
-                                strip.setPixelColor(14, led1)
-                                strip.setPixelColor(15, led0)
-                            else:
-                                strip.setPixelColor(y, Color(0,0,0))
-                        else:        
-                            strip.setPixelColor(y, Color(0,0,0))
-                        
-                        for y in range (0,200):
-                            strip.setPixelColor(y, Color(0,0,0))
-                        if status:
-                            strip.setPixelColor(3, led0)
-                            strip.setPixelColor(4, led1)
-                            strip.setPixelColor(5, led2)
-                            strip.setPixelColor(13, led2)
-                            strip.setPixelColor(14, led1)  
-                            strip.setPixelColor(15, led0)
+#                        if y==3 or y==4 or y==5 or y==13 or y==14 or y==15:
+#                            if status:
+#                                strip.setPixelColor(3, led0)
+#                                strip.setPixelColor(4, led1)
+#                                strip.setPixelColor(5, led2)
+#                                strip.setPixelColor(13, led2)
+#                                strip.setPixelColor(14, led1)
+#                                strip.setPixelColor(15, led0)
+#                            else:
+#                                strip.setPixelColor(y, Color(0,0,0))
+#                        else:        
+#                            strip.setPixelColor(y, Color(0,0,0))
+#                        
+#                        for y in range (0,200):
+#                            strip.setPixelColor(y, Color(0,0,0))
+#                        if status:
+#                            strip.setPixelColor(3, led0)
+#                            strip.setPixelColor(4, led1)
+#                            strip.setPixelColor(5, led2)
+#                            strip.setPixelColor(13, led2)
+#                            strip.setPixelColor(14, led1)  
+#                            strip.setPixelColor(15, led0)
                             
                         strip.show()
                         led.value=0
