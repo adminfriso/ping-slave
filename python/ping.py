@@ -60,16 +60,17 @@ strip.begin()
 frame=0;starttijd=0;Beeld=None;led0=Color(0,0,0);led1=Color(0,0,0)
 scheduler = sched.scheduler(time.time, time.sleep)
 #init start
-fps=25.0
+fps=60
 whiteleds=False
 whitepulse=True
 status=True
-fadeout=True
-fadein=True
+fadeout=False #True
+fadein=False #True
 repeat=False
 repeatFile=""
 repeatDuration=0
 repeatFlip=False
+timeRatio=0.68
 led2 = Color(255,0,255) # version led#3
 
 # thread safe
@@ -77,40 +78,40 @@ lightQueue = Queue.Queue()
 soundQueue = Queue.Queue()
 
 def SetStatus(name):
-    if Beeld==None and status==True :
+    #if Beeld==None and status==True :
         #processor load
-        cpu = int(LoadAverage().value*250)
-        if (cpu>255): cpu=255
-        if (cpu<0):cpu=0
-        cpu = gamma8[cpu]
-        led0 = Color(0,cpu,255-cpu) # groen is 100%
+    cpu = int(LoadAverage().value*250)
+    if (cpu>255): cpu=255
+    if (cpu<0):cpu=0
+    cpu = gamma8[cpu]
+    led0 = Color(0,cpu,255-cpu) # groen is 100%
         #netwerk verbinding
-        check = PingServer("192.168.8.1")
-        if (check.value==True):
-            b=120
-        else:
-            b=10
-        check = PingServer("8.8.8.8")
-        if (check.value==True):
-            g=120
-        else:
-            g=10
-        check = PingServer("192.168.8.50")
-        if (check.value==True):
-            r=120
-        else:
-            r=10
-        led1 = Color(b,g,r)
+    check = PingServer("192.168.8.1")
+    if (check.value==True):
+        b=120
+    else:
+        b=10
+    check = PingServer("8.8.8.8")
+    if (check.value==True):
+        g=120
+    else:
+        g=10
+    check = PingServer("192.168.8.50")
+    if (check.value==True):
+        r=120
+    else:
+        r=10
+    led1 = Color(b,g,r)
 
-        #gitstatus up to date met head? ->     moet nog
-        strip.setPixelColor(3, led0)
-        strip.setPixelColor(4, led1)
-        strip.setPixelColor(5, led2)
-        strip.setPixelColor(13, led2)
-        strip.setPixelColor(14, led1)
-        strip.setPixelColor(15, led0)
-        strip.show()
-    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
+    #gitstatus up to date met head? ->     moet nog
+    strip.setPixelColor(3, led0)
+    strip.setPixelColor(4, led1)
+    strip.setPixelColor(5, led2)
+    strip.setPixelColor(13, led2)
+    strip.setPixelColor(14, led1)
+    strip.setPixelColor(15, led0)
+    #strip.show()
+    #e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
 def imgMerge (orImg,newImg,frame):
     widthNewImg,heigthNewImg = newImg.size
@@ -129,6 +130,12 @@ def imgMerge (orImg,newImg,frame):
 def imgFlip(orImg):
     finalImg = orImg.transpose(PIL.Image.FLIP_LEFT_RIGHT)
     return finalImg
+
+def Blackleds():
+    for y in range (0,LED_COUNT):
+        strip.setPixelColor(y, Color(0,0,0))
+#         if status==True:  #             SetStatus('check')
+        strip.show()
 
 def showLeds (im,frame):
     #witte leds
@@ -191,16 +198,16 @@ class LightSlave(threading.Thread):
                 im = Image.open(imgFile)
                 im = im.convert("RGB")
                 im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
-                if repeatFlip:
-                    im=imgFlip(im)
+#                 if repeatFlip:
+#                     im=imgFlip(im)
                 #repeat                
-                if comWords.len()>2:
-                    if comWords[3]=="repeatTrue":
-                        File=imgFile
-                        repeatDuration=duration
-                        repeat=True
-                    elif comWords[3]=="repeatFalse":
-                        repeat=False
+#                 if comWords.len()>2:
+#                     if comWords[3]=="repeatTrue":
+#                         File=imgFile
+#                         repeatDuration=duration
+#                         repeat=True
+#                     elif comWords[3]=="repeatFalse":
+#                         repeat=False
                 #beeld
                 if (Beeld!=None):
                     Beeld = imgMerge(Beeld,im,frame)
@@ -227,6 +234,7 @@ class LightSlave(threading.Thread):
                         else:
                             Beeld=None
                             repeatFlip = False
+                            Blackleds()
                         #clear all LED's?                            
                         #strip.show()
                         #led.value=0
@@ -444,14 +452,15 @@ if __name__ == '__main__':
                     status=False
                 elif com=="E,statuson":
                     status=True
+                    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
                 elif com=="E,fadeouton":
                     fadeout=True
                 elif com=="E,fadeoutoff":
                     fadeout=False
                 elif com=="E,fadeinon":
-                    fadeout=True
+                    fadein=True
                 elif com=="E,fadeinoff":
-                    fadeout=False
+                    fadein=False
             #sound
             elif comWords[0]=="s" and len(comWords)>2:
                 soundQueue.put(com)
@@ -471,3 +480,5 @@ if __name__ == '__main__':
                 print("python, not processable:" + com)
         except Exception as e:
             print(e)
+
+
