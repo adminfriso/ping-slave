@@ -60,7 +60,7 @@ strip.begin()
 frame=0;starttijd=0;Beeld=None;led0=Color(0,0,0);led1=Color(0,0,0)
 scheduler = sched.scheduler(time.time, time.sleep)
 #init start
-fps=60
+fps=25.0
 whiteleds=False
 whitepulse=True
 status=True
@@ -78,40 +78,42 @@ lightQueue = Queue.Queue()
 soundQueue = Queue.Queue()
 
 def SetStatus(name):
-    #if Beeld==None and status==True :
+    if status==True :
         #processor load
-    cpu = int(LoadAverage().value*250)
-    if (cpu>255): cpu=255
-    if (cpu<0):cpu=0
-    cpu = gamma8[cpu]
-    led0 = Color(0,cpu,255-cpu) # groen is 100%
+        cpu = int(LoadAverage().value*250)
+        if (cpu>255): cpu=255
+        if (cpu<0):cpu=0
+        cpu = gamma8[cpu]
+        led0 = Color(0,cpu,255-cpu) # groen is 100%
         #netwerk verbinding
-    check = PingServer("192.168.8.1")
-    if (check.value==True):
-        b=120
-    else:
-        b=10
-    check = PingServer("8.8.8.8")
-    if (check.value==True):
-        g=120
-    else:
-        g=10
-    check = PingServer("192.168.8.50")
-    if (check.value==True):
-        r=120
-    else:
-        r=10
-    led1 = Color(b,g,r)
+        check = PingServer("192.168.8.1")
+        if (check.value==True):
+            b=120
+        else:
+            b=10
+        check = PingServer("8.8.8.8")
+        if (check.value==True):
+            g=120
+        else:
+            g=10
+        check = PingServer("192.168.8.50")
+        if (check.value==True):
+            r=120
+        else:
+            r=10
+        led1 = Color(b,g,r)
 
-    #gitstatus up to date met head? ->     moet nog
+        SetStatusLeds()
+        #strip.show()
+    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
+        
+def SetStatusLeds():
     strip.setPixelColor(3, led0)
     strip.setPixelColor(4, led1)
     strip.setPixelColor(5, led2)
     strip.setPixelColor(13, led2)
     strip.setPixelColor(14, led1)
     strip.setPixelColor(15, led0)
-    #strip.show()
-    #e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
 def imgMerge (orImg,newImg,frame):
     widthNewImg,heigthNewImg = newImg.size
@@ -134,8 +136,10 @@ def imgFlip(orImg):
 def Blackleds():
     for y in range (0,LED_COUNT):
         strip.setPixelColor(y, Color(0,0,0))
-#         if status==True:  #             SetStatus('check')
-        strip.show()
+    
+    if status:
+        SetStatusLeds()
+    strip.show()
 
 def showLeds (im,frame):
     #witte leds
@@ -165,18 +169,9 @@ def showLeds (im,frame):
         r=gamma8[int(r)]
         g=gamma8[int(g)]
         b=gamma8[int(b)]
-        if y==3 or y==4 or y==5 or y==13 or y==14 or y==15:
-            if status:
-                strip.setPixelColor(3, led0)
-                strip.setPixelColor(4, led1)
-                strip.setPixelColor(5, led2)
-                strip.setPixelColor(13, led2)
-                strip.setPixelColor(14, led1)
-                strip.setPixelColor(15, led0)
-            else:
-                strip.setPixelColor(y, Color(b,g,r))
-        else:        
-            strip.setPixelColor(y, Color(b,g,r))
+        strip.setPixelColor(y, Color(b,g,r))
+    if status:
+        SetStatusLeds()
     strip.show()
 
 class LightSlave(threading.Thread):
@@ -195,9 +190,13 @@ class LightSlave(threading.Thread):
                 comWords = self.command.split(",")
                 imgFile=comWords[1]
                 duration=float(comWords[2])
-                im = Image.open(imgFile)
-                im = im.convert("RGB")
-                im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
+                try:
+                    im = Image.open(imgFile)
+                    im = im.convert("RGB")
+                    im = im.resize((int(duration*fps),200),5) #PI2.Image.LANCZOS
+                except Exception as e:
+                    print(e)
+                    continue
 #                 if repeatFlip:
 #                     im=imgFlip(im)
                 #repeat                
@@ -215,26 +214,27 @@ class LightSlave(threading.Thread):
                     Beeld=im
                     frame=0
             else:
-                strip.show()
+                #strip.show()
                 time.sleep(0.01)
             #check of tijd verloopt voor nieuwe frame
             elapsed=(time.time()*1000)-starttijd
             if (Beeld!=None):
-                if (elapsed>(1000/fps)):
-                    starttijd=time.time()*1000;elapsed=0
+                if (elapsed>(timeRatio*(1000/fps))):
+                    starttijd=time.time()*1000
+                    elapsed=0
                     #show leds
                     breedte, hoogte = Beeld.size
                     if (frame<breedte):
                         showLeds(Beeld,frame)
                     else:
                     #aan einde van Image alles reset
-                        if repeat==True:
-                            lightQueue.put("i,"+repeatFile+","+str(repeatDuration))
-                            repeatFlip = not repeatFlip
-                        else:
-                            Beeld=None
-                            repeatFlip = False
-                            Blackleds()
+#                         if repeat==True:
+#                             lightQueue.put("i,"+repeatFile+","+str(repeatDuration))
+#                             repeatFlip = not repeatFlip
+#                         else:
+#                             Beeld=None
+#                             repeatFlip = False
+                        Blackleds()
                         #clear all LED's?                            
                         #strip.show()
                         #led.value=0
@@ -417,7 +417,7 @@ def updateApt():
 if __name__ == '__main__':
     start()
     #set scheduler for statuscheck
-    e1 = scheduler.enter(10, 1, SetStatus, ('check',))
+    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
     threading.Thread(target=scheduler.run).start()
     while 1:
         try:
@@ -480,5 +480,3 @@ if __name__ == '__main__':
                 print("python, not processable:" + com)
         except Exception as e:
             print(e)
-
-
