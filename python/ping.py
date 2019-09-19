@@ -102,9 +102,8 @@ def SetStatus(name):
         else:
             r=10
         led1 = Color(b,g,r)
-
+        
         SetStatusLeds()
-        #strip.show()
     e1 = scheduler.enter(1, 1, SetStatus, ('check',))
         
 def SetStatusLeds():
@@ -136,7 +135,6 @@ def imgFlip(orImg):
 def Blackleds():
     for y in range (0,LED_COUNT):
         strip.setPixelColor(y, Color(0,0,0))
-    
     if status:
         SetStatusLeds()
     strip.show()
@@ -235,9 +233,6 @@ class LightSlave(threading.Thread):
 #                             Beeld=None
 #                             repeatFlip = False
                         Blackleds()
-                        #clear all LED's?                            
-                        #strip.show()
-                        #led.value=0
                     frame+=1
                 else:
                     time.sleep(0.001)
