@@ -57,7 +57,7 @@ gamma8 = [ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,
 strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
 strip.begin()
 #init global variables
-frame=0;starttijd=0;Beeld=None;led0=Color(0,0,0);led1=Color(0,0,0)
+frame=0;starttijd=0;Beeld=None
 scheduler = sched.scheduler(time.time, time.sleep)
 #init start
 fps=25.0
@@ -79,14 +79,16 @@ led2 = Color(255,0,255) # version led#3
 lightQueue = Queue.Queue()
 soundQueue = Queue.Queue()
 
-def SetStatus(name):
+def SetStatus(check):
     if status==True :
+        
         #processor load
         cpu = int(LoadAverage().value*250)
         if (cpu>255): cpu=255
         if (cpu<0):cpu=0
         cpu = gamma8[cpu]
         led0 = Color(0,cpu,255-cpu) # groen is 100%
+        
         #netwerk verbinding
         check = PingServer("192.168.8.1")
         if (check.value==True):
@@ -106,7 +108,8 @@ def SetStatus(name):
         led1 = Color(b,g,r)
         
         SetStatusLeds()
-    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
+        
+    e1 = scheduler.enter(1, 1, SetStatus, ("check",))
         
 def SetStatusLeds():
     strip.setPixelColor(3, led0)
