@@ -421,7 +421,7 @@ def updateApt():
 if __name__ == '__main__':
     start()
     #set scheduler for statuscheck
-    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
+    e1 = scheduler.enter(10, 1, SetStatus, ('check',))
     threading.Thread(target=scheduler.run).start()
     while 1:
         try:
