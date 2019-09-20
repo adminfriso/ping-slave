@@ -148,6 +148,7 @@ def showLeds (im,frame):
         led.value=L/255.0
     #addressables
     widthorim,heigthorim = im.size
+    #print(widthorim)
     lastPart=(3.0/4.0)*float(widthorim)
     firstPart=(1.0/4.0)*float(widthorim)
     for y in range (0,heigthorim):
@@ -161,6 +162,7 @@ def showLeds (im,frame):
         #fadeOUT
         if fadeout==True and frame>lastPart :
             ratio=float(widthorim-frame)/float(widthorim-lastPart)
+            #print(ratio)
             r=ratio*float(r)
             g=ratio*float(g)
             b=ratio*float(b)
@@ -233,6 +235,8 @@ class LightSlave(threading.Thread):
 #                             Beeld=None
 #                             repeatFlip = False
                         Blackleds()
+                        frame=0
+                        Beeld=None
                     frame+=1
                 else:
                     time.sleep(0.001)
