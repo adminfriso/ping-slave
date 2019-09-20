@@ -64,13 +64,15 @@ fps=25.0
 whiteleds=False
 whitepulse=True
 status=True
-fadeout=False #True
+fadeout=True
 fadein=False #True
 repeat=False
 repeatFile=""
 repeatDuration=0
 repeatFlip=False
 timeRatio=0.68
+led0 = Color(0,0,0)
+led1 = Color(0,0,0)
 led2 = Color(255,0,255) # version led#3
 
 # thread safe
