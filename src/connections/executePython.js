@@ -29,7 +29,10 @@ module.exports = () => {
   // receive data from the server
   services.socket.on('execute-python', (command) => {
     if (command == null) {
-      services.socket.emit('execute-python', null);
+      services.socket.emit('execute-python', {
+        success: false,
+        message: "Command was empty",
+      });
       return;
     }
     pyShell.send(command);

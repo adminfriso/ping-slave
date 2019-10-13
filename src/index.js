@@ -12,3 +12,4 @@ connections.executeCommand();
 connections.executePython();
 connections.fileUpload();
 connections.tempFileUpload();
+connections.fileDownload();
