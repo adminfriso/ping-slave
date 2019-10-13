@@ -5,6 +5,7 @@ It is a node.js server application which will be used as websocket client for th
 
 This repo features:
 * Receiving files, and store them to the storage or storage/temp folder.
+* Getting files from the filesystem and upload it to the socket.
 * Deleting files.
 * Executing commands on the beacon.
 * Return the serial number of the raspberry pi as identification of the beacon for the master project.
@@ -12,7 +13,7 @@ This repo features:
 * Executing python commands on the beacon.
 
 ## Potential issues and todo's
-* interne wifi antenne uit zetten op slave
+* interne wifi antenne uit zetten op slave?? willen we dit niet aan laten zodat we stabieler verbonden blijven
 
 ## Raspberry usefull links
 * [Install clean distro using MAC OSX](https://www.macworld.co.uk/how-to/mac/how-to-set-up-raspberry-pi-3-with-mac-3637490/)
