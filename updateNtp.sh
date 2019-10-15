@@ -1,5 +1,5 @@
 #!/bin/bash
-exec sudo root /bin/sh - << eof
+exec sudo -u root /bin/sh - << eof
   if grep -Fxq "server 192.168.8.50" /etc/ntp.conf
   then
     # code if found
