@@ -11,7 +11,8 @@ exec sudo -u root /bin/sh - << eof
       #code if found
       echo "configuring ntp"
       echo "server 192.168.8.50" >> /etc/ntp.conf
-      service ntp reload
+      service ntp
+      ./updateNtp.sh
     fi
   else
     #code if not found
