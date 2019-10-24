@@ -6,7 +6,11 @@ module.exports = () => {
   services.socket.on('temp-file-upload', (file) => {
     fs.writeFile("storage/temp/" + file.name, file.data, function (err) {
       if (err) {
-        services.socket.emit('temp-file-upload', err);
+        services.socket.emit('temp-file-upload', {
+          success: false,
+          message: "Temp file upload errored on the beacon.",
+          err,
+        });
         return;
       }
       let response = {

@@ -31,10 +31,11 @@ module.exports = () => {
     if (command == null) {
       services.socket.emit('execute-python', {
         success: false,
-        message: "Command was empty",
+        message: "Command was empty.",
       });
       return;
     }
+
     pyShell.send(command);
 
     let response = {
