@@ -2,6 +2,7 @@
 
 module.exports = () => {
   // initialize python
+  let pythonErrored;
   let { PythonShell } = require('python-shell');
   let pyShell = null;
   console.log('starting python');
@@ -10,6 +11,7 @@ module.exports = () => {
     // pythonOptions: ['-u'],
     pythonPath: '/usr/bin/python2.7'
   }).on('error', function (error) {
+    pythonErrored = error;
     console.log('--------------------------------------------------------');
     console.log('receiving a breaking callback from python');
     console.log('--------------------------------------------------------');
@@ -36,7 +38,16 @@ module.exports = () => {
       return;
     }
 
-    pyShell.send(command);
+    try {
+      pyShell.send(command);
+    } catch (error) {
+      return services.socket.emit('execute-python', {
+        success: false,
+        message: "Python errored.",
+        pythonErrored,
+        error,
+      });
+    }
 
     let response = {
       success: true,
