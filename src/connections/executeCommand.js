@@ -16,15 +16,17 @@ module.exports = () => {
         command: "sudo reboot",
         status: "Received but doing an early callback.",
       });
-      return;
+      // do no return here! we need to arrive at execing this command
+      //TODO: Optional do here a seperate exec command and then return. That is the cleanest.
     }
     exec(command, (err, stdout, stderr) => {
       if (err) {
         services.socket.emit('execute-command', {
           success: false,
           status: "Node couldn't execute the command.",
-          err
+          err,
         });
+        return;
       }
       let response = {
         success: true,
