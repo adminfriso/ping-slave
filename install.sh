@@ -61,6 +61,12 @@ sed -i 's/^dtoverlay=lirc-rpi.*/#dtoverlay=lirc-rpi/' /boot/config.txt
 sed -i 's/^#dtoverlay=lirc-rpi.*/dtoverlay=hifiberry-dac/' /boot/config.txt
 sed -i 's/^dtparam=audio=on.*/#dtparam=audio=on/' /boot/config.txt
 
+# setup time
+apt purge ntp -y
+sed -i s/\#NTP=/NTP\=192\.168\.8\.50/g /etc/systemd/timesyncd.conf
+timedatectl set-ntp true
+systemctl enable systemd-timesyncd
+systemctl restart systemd-timesyncd
 
 # install node and npm
 echo "installing node and npm"
