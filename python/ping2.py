@@ -143,11 +143,6 @@ def imgMerge(orImg, newImg, frame):
     return finalImg
 
 
-# def imgFlip(orImg):
-#     finalImg = orImg.transpose(PIL.Image.FLIP_LEFT_RIGHT)
-#     return finalImg
-
-
 def Blackleds():
     for y in range(0, LED_COUNT):
         strip.setPixelColor(y, Color(0, 0, 0))
