@@ -25,9 +25,8 @@ from gpiozero import LoadAverage, PingServer
 # sound config
 try:
     import contextlib
-
     with contextlib.redirect_stdout(None):  # disabled de irritante welkom tekst van pygame
-        from pygame import mixer
+    from pygame import mixer
 except:
     from pygame import mixer
 mixer.init()
@@ -38,9 +37,9 @@ from PIL import ImageChops
 # white LEDS
 led = PWMLED(20)
 led.value = 0
+
 # addressable LEDS
 from neopixel import *
-
 LED_COUNT = 200  # Number of LED pixels.
 LED_PIN = 13  # GPIO pin connected to the pixels (18 uses PWM!).
 LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
@@ -50,6 +49,7 @@ LED_INVERT = False  # True to invert the signal (when using NPN transistor level
 LED_CHANNEL = 1  # set to '1' for GPIOs 13, 19, 41, 45 or 53
 strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
 strip.begin()
+# init global variables
 gamma8 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1,
           1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 7, 8,
           8, 8, 9, 9, 9, 10, 10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, 18, 18, 19, 19, 20,
@@ -60,9 +60,6 @@ gamma8 = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
           140, 142,  144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175, 177, 180, 182, 184,
           186, 189,  191, 193, 196, 198, 200, 203, 205, 208, 210, 213, 215, 218, 220, 223, 225, 228, 231, 233, 236, 239,
           241, 244,  247, 249, 252, 255}
-strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
-strip.begin()
-# init global variables
 frame = 0
 starttijd = 0
 Beeld = None
@@ -73,59 +70,59 @@ whiteleds = False
 whitepulse = True
 status = True
 fadeout = True
-fadein = False  # True
+fadein = False 
 repeat = False
 repeatFile = ""
 repeatDuration = 0
 repeatFlip = False
 timeRatio = 0.68
-led0 = Color(0, 0, 0)
-led1 = Color(0, 0, 0)
-led2 = Color(255, 0, 255)  # version led#3
+#led0 = Color(0, 0, 0)
+#led1 = Color(0, 0, 0)
+#led2 = Color(255, 0, 255)  # version led#3
+paars = Color(255, 0, 255)
 
 # thread safe
 lightQueue = Queue.Queue()
 soundQueue = Queue.Queue()
 
-
-def SetStatus(check):
-    if status is True:
-        # processor load
-        cpu = int(LoadAverage().value * 250)
-        if cpu > 255: cpu = 255
-        if cpu < 0: cpu = 0
-        cpu = gamma8[cpu]
-        led0 = Color(0, cpu, 255 - cpu)  # groen is 100%
-        # netwerk verbinding
-        check = PingServer("192.168.8.1")
-        if check.value is True:
-            b = 120
-        else:
-            b = 10
-        check = PingServer("8.8.8.8")
-        if check.value is True:
-            g = 120
-        else:
-            g = 10
-        check = PingServer("192.168.8.50")
-        if check.value is True:
-            r = 120
-        else:
-            r = 10
-        led1 = Color(b, g, r)
-
-        SetStatusLeds()
-
-    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
+#def SetStatus(check):
+#    if status is True:
+#        # processor load
+#        cpu = int(LoadAverage().value * 250)
+#        if cpu > 255: cpu = 255
+#        if cpu < 0: cpu = 0
+#        cpu = gamma8[cpu]
+#        led0 = Color(0, cpu, 255 - cpu)  # groen is 100%
+#        # netwerk verbinding
+#        check = PingServer("192.168.8.1")
+#        if check.value is True:
+#            b = 120
+#        else:
+#            b = 10
+#        check = PingServer("8.8.8.8")
+#        if check.value is True:
+#            g = 120
+#        else:
+#            g = 10
+#        check = PingServer("192.168.8.50")
+#        if check.value is True:
+#            r = 120
+#        else:
+#            r = 10
+#        led1 = Color(b, g, r)##
+#
+#        SetStatusLeds()
+#
+#    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
 
 def SetStatusLeds():
-    strip.setPixelColor(3, led0)
-    strip.setPixelColor(4, led1)
-    strip.setPixelColor(5, led2)
-    strip.setPixelColor(13, led2)
-    strip.setPixelColor(14, led1)
-    strip.setPixelColor(15, led0)
+    #strip.setPixelColor(3, led0)
+    #strip.setPixelColor(4, led1)
+    strip.setPixelColor(5, paars)
+    strip.setPixelColor(13, paars)
+    #strip.setPixelColor(14, led1)
+    #strip.setPixelColor(15, led0)
 
 
 def imgMerge(orImg, newImg, frame):
@@ -218,7 +215,7 @@ class LightSlave(threading.Thread):
                     frame = 0
             else:
                 # strip.show()
-                time.sleep(0.01)
+                time.sleep(0.001)
             # check of tijd verloopt voor nieuwe frame
             elapsed = (time.time() * 1000) - starttijd
             if Beeld is not None:
