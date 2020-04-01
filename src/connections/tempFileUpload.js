@@ -3,8 +3,12 @@ const fs = require('fs');
 const rimraf = require('rimraf');
 
 module.exports = () => {
-  services.socket.on('temp-file-upload', (file) => {
-    fs.writeFile("storage/temp/" + file.name, file.data, function (err) {
+  services.socket.on('temp-file-upload', (file, path) => {
+    let basePath = "storage/temp/" + path;
+    if (!fs.existsSync(basePath)) {
+      fs.mkdirSync(basePath);
+    }
+    fs.writeFile(basePath + file.name, file.data, function (err) {
       if (err) {
         services.socket.emit('temp-file-upload', {
           success: false,
@@ -15,7 +19,7 @@ module.exports = () => {
       }
       let response = {
         success: true,
-        message: "Uploaded file to storage/temp folder.",
+        message: "Uploaded file to "+ basePath +" folder.",
       };
       services.socket.emit('temp-file-upload', response);
     });

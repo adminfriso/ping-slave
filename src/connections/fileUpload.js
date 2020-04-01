@@ -1,8 +1,12 @@
 'use strict';
 const fs = require('fs');
 module.exports = () => {
-  services.socket.on('file-upload', (file) => {
-    fs.writeFile("storage/" + file.name, file.data, function (err) {
+  services.socket.on('file-upload', (file, path) => {
+    let basePath = "storage/" + path;
+    if (!fs.existsSync(basePath)) {
+      fs.mkdirSync(basePath);
+    }
+    fs.writeFile(basePath + file.name, file.data, function (err) {
       if (err) {
         services.socket.emit('file-upload', {
           success: false,
@@ -13,7 +17,7 @@ module.exports = () => {
       }
       let response = {
         success: true,
-        message: "Uploaded file to storage folder.",
+        message: "Uploaded file to " + basePath + " folder.",
       };
       services.socket.emit('file-upload', response);
     });
