@@ -1,4 +1,5 @@
-#!/bin/bash
+#@IgnoreInspection BashAddShebang
+#no shebang, this file is to walk troug, not to execute
 
 # ------------------------------------------------------------------------------
 # this script is not suitable to run as is
@@ -12,6 +13,51 @@ sudo su
 #variables
 login_user="pi"
 
+#setup wifi
+cd /etc/wpa_supplicant/
+nano wpa_supplicant.conf
+
+#add the next lines (and fix the psk ofcourse)
+network={
+    ssid="ping1"
+    psk="DatKunJeWelZelfBedenken"
+}
+
+network={
+    ssid="Modderman"
+    psk="DatKunJeWelZelfBedenken"
+}
+
+#then reboot
+reboot
+
+#enable ssh, setup locale, keyboard and others
+sudo su
+raspi-config
+
+#configure locale
+#check installed locales (setted up in raspi-config)
+locale -a
+cd /etc/default
+nano locale
+#set correct locale
+LANG=en_US.UTF-8
+LANGUAGE=en_US.UTF-8
+LC_CTYPE="en_US.UTF-8"
+LC_NUMERIC="en_US.UTF-8"
+LC_TIME="en_US.UTF-8"
+LC_COLLATE="en_US.UTF-8"
+LC_MONETARY="en_US.UTF-8"
+LC_MESSAGES="en_US.UTF-8"
+LC_PAPER="en_US.UTF-8"
+LC_NAME="en_US.UTF-8"
+LC_ADDRESS="en_US.UTF-8"
+LC_TELEPHONE="en_US.UTF-8"
+LC_MEASUREMENT="en_US.UTF-8"
+LC_IDENTIFICATION="en_US.UTF-8"
+reboot
+
+sudo su
 # install general packages
 apt update
 apt upgrade -y
@@ -24,6 +70,7 @@ apt install -y python-pygame
 
 apt install -y python-pil
 
+apt autoremove
 
 ## Ws2812 leds:
 echo "blacklist snd_bcm2835" | tee /etc/modprobe.d/snd-blacklist.conf
@@ -40,17 +87,9 @@ sudo python setup.py build
 sudo python setup.py install
 cd ../../
 
-reboot
-## I2S Geluid
-#
-#sudo nano /boot/config.txt
-## set the next parameters
-#dtparam=i2c_arm=on
-#dtparam=i2s=on
-#dtparam=spi=on
-##dtoverlay=lirc-rpi
-#dtoverlay=hifiberry-dac
-##dtparam=audio=on
+sudo reboot
+
+# Setup I2S Geluid
 sudo su
 pip install rpi_ws281x
 
@@ -68,7 +107,7 @@ timedatectl set-ntp true
 systemctl enable systemd-timesyncd
 systemctl restart systemd-timesyncd
 
-# install node and npm
+# install node and npm (node is not higher than 8.9 on armV6l hardware)
 echo "installing node and npm"
 wget https://nodejs.org/dist/v8.9.0/node-v8.9.0-linux-armv6l.tar.gz
 tar -xzf node-v8.9.0-linux-armv6l.tar.gz
@@ -89,14 +128,13 @@ npm install -g npm
 
 npm -v
 
-echo "going to the pi user"
-exit;
+#also execute the next commands as root
 
 echo "setting node to production mode"
 NODE_ENV=production
 
 echo "installing pm2"
-sudo npm install pm2@latest -g
+npm install pm2 -g
 
 # setup git
 echo "configure git"
@@ -113,22 +151,14 @@ cp ./.env.example ./.env
 # SET CORRECT ENV VARIABLES FOR DEVICE
 read  -n 1 -p "Please set the variables first before you continue. Do you want to continue now?? y/n" continueInstall
 echo ""
-if [ "continueInstall" = "n" ]; then
-    echo "Commands to run after setting up the .env file"
-    echo "npm install"
-    echo "sudo pm2 startup"
-    echo "sudo pm2 start src/index.js"
-    echo "sudo pm2 save"
-    echo "sudo reboot"
-    exit
-fi
+
 echo "installing dependencies"
 npm install
 # start server
 echo "install and start node server"
 
-sudo pm2 startup
-sudo pm2 start src/index.js
-sudo pm2 save
+pm2 startup
+pm2 start src/index.js
+pm2 save
 
-sudo reboot
+reboot
