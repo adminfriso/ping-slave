@@ -15,9 +15,8 @@ login_user="pi"
 
 #setup wifi
 cd /etc/wpa_supplicant/
-nano wpa_supplicant.conf
+cat <<EOT >> wpa_supplicant.conf
 
-#add the next lines (and fix the psk ofcourse)
 network={
     ssid="ping1"
     psk="DatKunJeWelZelfBedenken"
@@ -27,9 +26,10 @@ network={
     ssid="Modderman"
     psk="DatKunJeWelZelfBedenken"
 }
+EOT
 
-#then reboot
 reboot
+#-------------------------------------- reboot --------------------------------------
 
 #enable ssh, setup locale, keyboard and others
 sudo su
@@ -39,8 +39,7 @@ raspi-config
 #check installed locales (setted up in raspi-config)
 locale -a
 cd /etc/default
-nano locale
-#set correct locale
+cat <<EOT >> locale
 LANG=en_US.UTF-8
 LANGUAGE=en_US.UTF-8
 LC_CTYPE="en_US.UTF-8"
@@ -55,7 +54,10 @@ LC_ADDRESS="en_US.UTF-8"
 LC_TELEPHONE="en_US.UTF-8"
 LC_MEASUREMENT="en_US.UTF-8"
 LC_IDENTIFICATION="en_US.UTF-8"
+EOT
+
 reboot
+#-------------------------------------- reboot --------------------------------------
 
 sudo su
 # install general packages
@@ -74,33 +76,32 @@ apt install -y python-gpiozero
 
 apt autoremove
 
-## Ws2812 leds:
+# # Setup I2S Sound
 echo "blacklist snd_bcm2835" | tee /etc/modprobe.d/snd-blacklist.conf
 
 sed -i 's/^dtparam=audio=on.*/#dtparam=audio=on/' /boot/config.txt
-
-reboot
-
-git clone https://github.com/jgarff/rpi_ws281x
-cd rpi_ws281x/
-sudo scons
-cd python
-sudo python setup.py build
-sudo python setup.py install
-cd ../../
-
-sudo reboot
-
-# Setup I2S Geluid
-sudo su
-pip install rpi_ws281x
-
 sed -i 's/^#dtparam=i2c_arm=on.*/dtparam=i2c_arm=on/' /boot/config.txt
 sed -i 's/^#dtparam=i2s=on.*/dtparam=i2s=on/' /boot/config.txt
 sed -i 's/^#dtparam=spi=on.*/dtparam=spi=on/' /boot/config.txt
 sed -i 's/^dtoverlay=lirc-rpi.*/#dtoverlay=lirc-rpi/' /boot/config.txt
-sed -i 's/^#dtoverlay=lirc-rpi.*/dtoverlay=hifiberry-dac/' /boot/config.txt
 sed -i 's/^dtparam=audio=on.*/#dtparam=audio=on/' /boot/config.txt
+echo "dtoverlay=hifiberry-dac" >> /boot/config.txt
+
+# Ws2812 leds:
+git clone https://github.com/jgarff/rpi_ws281x
+cd rpi_ws281x/
+sudo scons
+cd python
+python setup.py build
+python setup.py install
+cd ../../
+rm -r rpi_ws281x/
+
+reboot
+#-------------------------------------- reboot --------------------------------------
+
+sudo su
+pip install rpi_ws281x
 
 # setup time
 apt purge ntp -y
@@ -161,3 +162,4 @@ pm2 start src/index.js
 pm2 save
 
 reboot
+#-------------------------------------- reboot --------------------------------------
