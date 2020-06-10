@@ -98,6 +98,11 @@ node src/index.js &
 
 * **Friso Modderman - 404 solutions** - *Initial work* - [adminfriso](https://github.com/adminfriso)
 
+## Developer Reminders
+
+s,./storage/samples/bells/0.wav,0.05
+i,./storage/lichtbeeld/8.jpg,2
+
 pm2 stopzetten om te testen: sudo pm2 stop index
 
 statusleds: 

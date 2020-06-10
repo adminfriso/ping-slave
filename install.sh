@@ -70,6 +70,8 @@ apt install -y python-pygame
 
 apt install -y python-pil
 
+apt install -y python-gpiozero
+
 apt autoremove
 
 ## Ws2812 leds:
@@ -146,11 +148,8 @@ echo "clone git repo"
 git clone https://github.com/adminfriso/ping-slave.git
 echo "enter repo"
 cd ping-slave
-echo "creating .env file"
-cp ./.env.example ./.env
-# SET CORRECT ENV VARIABLES FOR DEVICE
-read  -n 1 -p "Please set the variables first before you continue. Do you want to continue now?? y/n" continueInstall
-echo ""
+echo "creating .env file directed for production usage"
+cp ./.env.pi ./.env
 
 echo "installing dependencies"
 npm install
