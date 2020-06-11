@@ -74,7 +74,7 @@ apt install -y python-pil
 
 apt install -y python-gpiozero
 
-apt autoremove
+apt autoremove -y
 
 # # Setup I2S Sound
 echo "blacklist snd_bcm2835" | tee /etc/modprobe.d/snd-blacklist.conf
@@ -88,9 +88,10 @@ sed -i 's/^dtparam=audio=on.*/#dtparam=audio=on/' /boot/config.txt
 echo "dtoverlay=hifiberry-dac" >> /boot/config.txt
 
 # Ws2812 leds:
+cd ~
 git clone https://github.com/jgarff/rpi_ws281x
 cd rpi_ws281x/
-sudo scons
+scons
 cd python
 python setup.py build
 python setup.py install
@@ -112,6 +113,7 @@ systemctl restart systemd-timesyncd
 
 # install node and npm (node is not higher than 8.9 on armV6l hardware)
 echo "installing node and npm"
+cd ~
 wget https://nodejs.org/dist/v8.9.0/node-v8.9.0-linux-armv6l.tar.gz
 tar -xzf node-v8.9.0-linux-armv6l.tar.gz
 cd node-v8.9.0-linux-armv6l
