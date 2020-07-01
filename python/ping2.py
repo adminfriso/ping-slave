@@ -38,6 +38,10 @@ from PIL import ImageChops
 led = PWMLED(20)
 led.value = 0
 
+# heat
+hotRes = PWMLED(16)
+hotRes.value = 0
+
 # addressable LEDS
 from neopixel import *
 LED_COUNT = 200  # Number of LED pixels.
@@ -382,6 +386,8 @@ if __name__ == '__main__':
                 F = ProbeSlave(comWords[1])
                 F.setDaemon(True)
                 F.start()
+            elif comWords[0] == "h":
+                hotRes = comWords[1])
             # check for Effect commands
             elif comWords[0] == "e":
                 if com == "e,whiteoff":
