@@ -36,11 +36,11 @@ from PIL import ImageChops
 
 # white LEDS
 led = PWMLED(20)
-led.value = 0
+led.value = 0   #0..1
 
 # heat
 hotRes = PWMLED(16)
-hotRes.value = 0
+hotRes.value = 0    #0..1
 
 # addressable LEDS
 from neopixel import *
@@ -158,7 +158,7 @@ def showLeds(im, frame):
         r, g, b = im.getpixel((frame, 0))
         r = gamma8[r]
         L = r * 0.39
-        led.value = L / 255.0
+        led.value = L / 255.0 # value is 0..1
     # addressables
     widthorim, heigthorim = im.size
     # print(widthorim)
