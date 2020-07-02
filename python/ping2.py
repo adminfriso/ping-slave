@@ -9,6 +9,7 @@
 # e(ffect),statusoff
 # e(ffect),statuson
 # p(robe),time(secs)
+# h(eat),0..1
 
 # Color=(b,g,r)
 
