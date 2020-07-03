@@ -388,7 +388,7 @@ if __name__ == '__main__':
                 F.setDaemon(True)
                 F.start()
             elif comWords[0] == "h":
-                hotRes = comWords[1])
+                hotRes.value = comWords[1]
             # check for Effect commands
             elif comWords[0] == "e":
                 if com == "e,whiteoff":
