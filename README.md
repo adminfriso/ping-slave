@@ -1,2 +1,114 @@
 # ping-slave
-New version of ping slave, however without the files in git history (better for download on all those beacons)
+
+This is the Client side application ran on the beacons used by the ping project. 
+It is a node.js server application which will be used as websocket client for the server application, found in the repo [ping-master](https://github.com/adminfriso/ping-master).
+
+This repo features:
+* Receiving files, and store them to the storage or storage/temp folder.
+* Getting files from the filesystem and upload it to the socket.
+* Deleting files.
+* Executing commands on the beacon.
+* Return the serial number of the raspberry pi as identification of the beacon for the master project.
+* Return the git version number.
+* Executing python commands on the beacon.
+
+## Raspberry usefull links
+* [Install clean distro using MAC OSX](https://www.macworld.co.uk/how-to/mac/how-to-set-up-raspberry-pi-3-with-mac-3637490/)
+* [Enable SSH](https://www.raspberrypi.org/documentation/remote-access/ssh/)
+* [Wireless (cli)](https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md)
+
+## Getting Started
+
+These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. 
+See deployment for notes on how to deploy the project on a live system eg the beacons.
+
+### Prerequisites
+
+What things you need to install the software and how to install them
+ 
+ * [Node.js](https://nodejs.org/en/download/)
+ * NPM (installed with Node.js)
+ * Common sense ;)
+
+### Installing
+
+A step by step series of examples that tell you how to get a development env running.
+There is not a lot into it.
+
+#### Project setup
+```
+npm install
+```
+
+##### Compiles and hot-reloads for development
+this uses nodemon
+```
+npm run serve
+```
+
+### Deployment
+First setup a wifi connection to connect with
+
+https://www.raspberrypi.org/documentation/configuration/wireless/wireless-cli.md
+
+Then enable ssh 
+
+https://www.raspberrypi.org/documentation/remote-access/ssh/
+
+Then run installation guide
+
+Then next part is pointed at the installation of node, this is also present in install.sh
+#### Node
+set the environment to production
+```bash
+NODE_ENV=production
+```
+copy the env variable and edit it if the configuration does not meet the current system
+```bash
+cp .env.example .env
+# optional if the configuration does not meet the current system
+nano .env
+```
+install the packages
+```bash
+npm install
+```
+run on production, the & is to run it in the background
+```bash
+node src/index.js &
+```
+
+### Updating
+here we will not assume you use pm2, if you do use it, forget the commands ```fg and node src/index.js &```
+
+```bash
+fg
+# then type CTRL+C
+git pull
+git reset HEAD --hard
+npm install
+node src/index.js &
+```
+
+## Built With
+* [Node.js](https://nodejs.org/en/docs/) - The server framework used
+* [socket.io-client](https://socket.io/docs/client-api/) - Socket.io client. The client version for the websockets
+
+## Authors
+
+* **Friso Modderman - 404 solutions** - *Initial work* - [adminfriso](https://github.com/adminfriso)
+
+## Developer Reminders
+LET OP, gebruikers wachtwoord van de pi user is ook aangepast
+s,./storage/samples/bells/0.wav,0.05
+i,./storage/lichtbeeld/8.jpg,2
+
+pm2 stopzetten om te testen: sudo pm2 stop index
+
+statusleds: 
+0:groen is python loopt
+1:wit is maximale wifi connectivity
+1:192.168.8.1 router -> blauw
+1:8.8.8.8 internet -> groen
+1:192.168.8.50server ->rood
+2:# groen is 0%, rood is 100% 

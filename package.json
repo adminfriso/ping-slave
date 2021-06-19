@@ -1,0 +1,29 @@
+{
+  "name": "ping-slave",
+  "version": "1.0.0",
+  "description": "The slave nodes repo for the ping project of Gijs van Bon",
+  "main": "src/index.js",
+  "scripts": {
+    "serve": "nodemon index"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adminfriso/ping-slave.git"
+  },
+  "author": "Friso Modderman - 404solutions",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/adminfriso/ping-slave/issues"
+  },
+  "homepage": "https://github.com/adminfriso/ping-slave#readme",
+  "dependencies": {
+    "dotenv": "^6.2.0",
+    "python-shell": "^1.0.8",
+    "requiredir": "^1.0.7",
+    "rimraf": "^2.7.1",
+    "socket.io-client": "^2.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^1.19.4"
+  }
+}
