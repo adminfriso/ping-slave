@@ -36,20 +36,20 @@ raspi-config
 locale -a
 cd /etc/default
 cat <<EOT >> locale
-LANG=en_US.UTF-8
-LANGUAGE=en_US.UTF-8
-LC_CTYPE="en_US.UTF-8"
-LC_NUMERIC="en_US.UTF-8"
-LC_TIME="en_US.UTF-8"
-LC_COLLATE="en_US.UTF-8"
-LC_MONETARY="en_US.UTF-8"
-LC_MESSAGES="en_US.UTF-8"
-LC_PAPER="en_US.UTF-8"
-LC_NAME="en_US.UTF-8"
-LC_ADDRESS="en_US.UTF-8"
-LC_TELEPHONE="en_US.UTF-8"
-LC_MEASUREMENT="en_US.UTF-8"
-LC_IDENTIFICATION="en_US.UTF-8"
+LANG=en_US.utf8
+LANGUAGE=en_US.utf8
+LC_CTYPE="en_US.utf8
+LC_NUMERIC="en_US.utf8"
+LC_TIME="en_US.utf8"
+LC_COLLATE="en_US.utf8"
+LC_MONETARY="en_US.utf8"
+LC_MESSAGES="en_US.utf8"
+LC_PAPER="en_US.utf8"
+LC_NAME="en_US.utf8"
+LC_ADDRESS="en_US.utf8"
+LC_TELEPHONE="en_US.utf8"
+LC_MEASUREMENT="en_US.utf8"
+LC_IDENTIFICATION="en_US.utf8"
 EOT
 
 reboot
@@ -105,7 +105,7 @@ lsmod | grep spi
 
 #if the spi module is not activated edit boot config
 # if activated
-sudo nano /boot/config.txt
+nano /boot/config.txt
 # set config
 dtparam=spi=on
 # else just continue
@@ -123,15 +123,11 @@ systemctl restart systemd-timesyncd
 
 # install node and npm (node is not higher than 8.9 on armV6l hardware)
 echo "installing node and npm"
-cd ~
-wget https://nodejs.org/dist/v8.9.0/node-v8.9.0-linux-armv6l.tar.gz
-tar -xzf node-v8.9.0-linux-armv6l.tar.gz
-cd node-v8.9.0-linux-armv6l
-cp -R * /usr/local/
-cd ../
-rm -R node-v8.9.0-linux-armv6l
-rm node-v8.9.0-linux-armv6l.tar.gz
+apt install -y nodejs
+apt install -y npm
 
+echo "nodejs version"
+nodejs -v
 echo "node version"
 node -v
 echo "npm version"
@@ -153,8 +149,8 @@ npm install pm2 -g
 
 # setup git
 echo "configure git"
-git config --global user.name "Friso Pi user"
-git config --global user.email "ping-slave-pi@404solutions.nl"
+git config --global user.name "Ping Beacon"
+git config --global user.email "ping@404solutions.nl"
 git config --global core.editor nano
 #setup repo
 echo "clone git repo"
@@ -175,3 +171,34 @@ pm2 save
 
 reboot
 #-------------------------------------- reboot --------------------------------------
+
+# copy files from usb stick to storage folder
+sudo su
+
+#stick in the USB stick
+
+ls -l /dev/disk/by-uuid/
+# find the device, generaly id'd by sda1
+
+sudo mkdir /media/usb
+sudo chown -R pi:pi /media/usb
+
+#mount the drive
+sudo mount /dev/sda1 /media/usb -o uid=pi,gid=pi
+
+#file transfers
+cp -r /media/usb/lichtbeeld /root/ping-slave/storage
+cp -r /media/usb/audio /root/ping-slave/storage
+
+# unmount the drive
+umount /media/usb
+# remove the USB stick
+
+
+#validate correct installation
+# postman request to server, see if beacon pops up
+# http://192.168.8.50:4000/api/v1/beacons
+# run command via server, to see if it has effect
+# post: 192.168.1.120:4000/api/v1/python/execute
+# body: Key: "pythonCommand" : Value: "i,./storage/lichtbeeld/8.jpg,2"
+

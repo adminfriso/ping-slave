@@ -28,7 +28,7 @@ from mfrc522 import SimpleMFRC522
 try:
     import contextlib
     with contextlib.redirect_stdout(None):  # disabled de irritante welkom tekst van pygame
-    from pygame import mixer
+        from pygame import mixer
 except:
     from pygame import mixer
 mixer.init()
