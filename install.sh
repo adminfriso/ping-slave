@@ -22,16 +22,12 @@ network={
     psk="DatKunJeWelZelfBedenken"
 }
 
-network={
-    ssid="Modderman"
-    psk="DatKunJeWelZelfBedenken"
-}
 EOT
 
 reboot
 #-------------------------------------- reboot --------------------------------------
 
-#enable ssh, setup locale, keyboard and others
+#enable ssh, setup locale, keyboard, others and P4 SPI (5 interfacing options -> P4SPI)
 sudo su
 raspi-config
 
@@ -103,6 +99,20 @@ reboot
 
 sudo su
 pip install rpi_ws281x
+
+#validate spi_bcm2835 (check if it )
+lsmod | grep spi
+
+#if the spi module is not activated edit boot config
+# if activated
+sudo nano /boot/config.txt
+# set config
+dtparam=spi=on
+# else just continue
+
+pip install spidev
+
+pip install mfrc522
 
 # setup time
 apt purge ntp -y
