@@ -99,6 +99,7 @@ reboot
 
 sudo su
 pip install rpi_ws281x
+pip install colorzero
 
 #validate spi_bcm2835 (check if it )
 lsmod | grep spi
