@@ -10,6 +10,7 @@
 # e(ffect),statuson
 # p(robe),time(secs)
 # h(eat),0..1
+# c(olor),0..1,0..1,0..1 
 
 # Color=(b,g,r)
 
@@ -89,6 +90,9 @@ timeRatio = 0.68
 #led1 = Color(0, 0, 0)
 #led2 = Color(255, 0, 255)  # version led#3
 paars = Color(255, 0, 255)
+Xr = 1
+Xg = 1
+Xb = 1
 
 # thread safe
 lightQueue = Queue.Queue()
@@ -164,7 +168,6 @@ def Blackleds():
         SetStatusLeds()
     strip.show()
 
-
 def showLeds(im, frame):
     # witte leds
     if whiteleds is True:
@@ -189,9 +192,9 @@ def showLeds(im, frame):
         if fadeout is True and frame > lastPart:
             ratio = float(widthorim - frame) / float(widthorim - lastPart)
             # print(ratio)
-            r = ratio * float(r)
-            g = ratio * float(g)
-            b = ratio * float(b)
+            r = Xr * ratio * float(r)
+            g = Xg * ratio * float(g)
+            b = Xb* ratio * float(b)
         r = gamma8[int(r)]
         g = gamma8[int(g)]
         b = gamma8[int(b)]
@@ -400,9 +403,13 @@ if __name__ == '__main__':
                 F.setDaemon(True)
                 F.start()
             elif comWords[0] == "h":
-                hotRes.value = comWords[1]
+                hotRes.value = float(comWords[1])
             elif comWords[0] == "r":
                 readRFID()
+            elif comWords[0] == "c":
+                Xr = float(comWords[1])
+                Xg = float(comWords[2])
+                Xb = float(comWords[3])
             # check for Effect commands
             elif comWords[0] == "e":
                 if com == "e,whiteoff":
