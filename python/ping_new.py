@@ -136,12 +136,12 @@ def SetStatusLeds():
 def readRFID():
     try:
         id, text = reader.read()
-        print("RFID:")
-        print(id)
-        print(text)
+        f = open("rfid.txt", "w")
+        f.write(text)
+        f.close()
     except Exception as e:
         print(e)
-
+        
 def imgMerge(orImg, newImg, frame):
     widthNewImg, heigthNewImg = newImg.size
     widthorImg, heigthorImg = orImg.size
