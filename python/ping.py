@@ -119,7 +119,7 @@ def SetStatus(check):
            r = 120
        else:
            r = 10
-       led1 = Color(b, g, r)##
+       led1 = Color(r,g,b)
 
        SetStatusLeds()
 
