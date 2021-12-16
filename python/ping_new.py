@@ -10,7 +10,7 @@
 # e(ffect),statuson
 # p(robe),time(secs)
 # h(eat),0..1
-# c(olor),0..1,0..1,0..1 
+# c(olor),0..1,0..1,0..1
 
 # Color=(b,g,r)
 
@@ -23,7 +23,6 @@ import os
 
 from gpiozero import PWMLED
 from gpiozero import LoadAverage, PingServer
-from mfrc522 import SimpleMFRC522
 
 # sound config
 try:
@@ -37,8 +36,6 @@ mixer.set_num_channels(50)  # default is 8
 from PIL import Image
 from PIL import ImageChops
 
-# RFID
-reader = SimpleMFRC522()
 
 # white LEDS
 led = PWMLED(20)
@@ -137,15 +134,6 @@ def SetStatusLeds():
     #strip.setPixelColor(14, led1)
     #strip.setPixelColor(15, led0)
 
-def readRFID():
-    try:
-        id, text = reader.read()
-        f = open("rfid.txt", "w")
-        f.write(text)
-        f.close()
-    except Exception as e:
-        print(e)
-        
 def imgMerge(orImg, newImg, frame):
     widthNewImg, heigthNewImg = newImg.size
     widthorImg, heigthorImg = orImg.size
@@ -404,8 +392,6 @@ if __name__ == '__main__':
                 F.start()
             elif comWords[0] == "h":
                 hotRes.value = float(comWords[1])
-            elif comWords[0] == "r":
-                readRFID()
             elif comWords[0] == "c":
                 Xr = float(comWords[1])
                 Xg = float(comWords[2])
