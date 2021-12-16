@@ -97,29 +97,29 @@ soundQueue = Queue.Queue()
 
 def SetStatus(check):
    if status is True:
-       # processor load
-       cpu = int(LoadAverage().value * 250)
-       if cpu > 255: cpu = 255
-       if cpu < 0: cpu = 0
-       cpu = gamma8[cpu]
-       led0 = Color(0, cpu, 255 - cpu)  # groen is 100%
-       # netwerk verbinding
-       check = PingServer("192.168.8.1")
-       if check.value is True:
-           b = 120
-       else:
-           b = 10
-       check = PingServer("8.8.8.8")
-       if check.value is True:
-           g = 120
-       else:
-           g = 10
-       check = PingServer("192.168.8.50")
-       if check.value is True:
-           r = 120
-       else:
-           r = 10
-       led1 = Color(r,g,b)
+#        # processor load
+#        cpu = int(LoadAverage().value * 250)
+#        if cpu > 255: cpu = 255
+#        if cpu < 0: cpu = 0
+#        cpu = gamma8[cpu]
+#        led0 = Color(0, cpu, 255 - cpu)  # groen is 100%
+#        # netwerk verbinding
+#        check = PingServer("192.168.8.1")
+#        if check.value is True:
+#            b = 120
+#        else:
+#            b = 10
+#        check = PingServer("8.8.8.8")
+#        if check.value is True:
+#            g = 120
+#        else:
+#            g = 10
+#        check = PingServer("192.168.8.50")
+#        if check.value is True:
+#            r = 120
+#        else:
+#            r = 10
+#        led1 = Color(r,g,b)
 
        SetStatusLeds()
 
