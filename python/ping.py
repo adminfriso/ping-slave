@@ -101,7 +101,7 @@ def SetStatus(check):
 #        cpu = int(LoadAverage().value * 250)
 #        if cpu > 255: cpu = 255
 #        if cpu < 0: cpu = 0
-#        cpu = gamma8[cpu]
+#         cpu = gamma8[cpu]
 #        led0 = Color(0, cpu, 255 - cpu)  # groen is 100%
 #        # netwerk verbinding
 #        check = PingServer("192.168.8.1")
@@ -119,7 +119,7 @@ def SetStatus(check):
 #            r = 120
 #        else:
 #            r = 10
-#        led1 = Color(r,g,b)
+#        led1 = Color(r, g, b)
 
        SetStatusLeds()
 
@@ -366,7 +366,7 @@ if __name__ == '__main__':
     threading.Thread(target=scheduler.run).start()
     while 1:
         try:
-            com = raw_input("s/i,file,volume(,time)>")
+            com = raw_input("s/i/h/w/e/c/p,file,volume(,time)>")
             comWords = com.split(",")
         except Exception as e:
             print(e)
