@@ -19,6 +19,15 @@ module.exports = () => {
       // do no return here! we need to arrive at execing this command
       //TODO: Optional do here a seperate exec command and then return. That is the cleanest.
     }
+    if (command === 'reboot') {
+      services.socket.emit('execute-command', {
+        success: true,
+        command: "reboot",
+        status: "Received but doing an early callback.",
+      });
+      // do no return here! we need to arrive at execing this command
+      //TODO: Optional do here a seperate exec command and then return. That is the cleanest.
+    }
     exec(command, (err, stdout, stderr) => {
       if (err) {
         services.socket.emit('execute-command', {
