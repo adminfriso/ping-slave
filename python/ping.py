@@ -408,7 +408,6 @@ if __name__ == '__main__':
                     whitepulse = True
                 elif com == "e,statusoff":
                     status = False
-                    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
                 elif com == "e,statuson":
                     status = True
                     e1 = scheduler.enter(1, 1, SetStatus, ('check',))
