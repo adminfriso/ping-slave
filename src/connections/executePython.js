@@ -5,11 +5,15 @@ module.exports = () => {
   let pythonErrored;
   let { PythonShell } = require('python-shell');
   let pyShell = null;
-  console.log('starting python');
-  pyShell = new PythonShell('./python/ping.py', {
+  let pythonScript = './python/ping.py';
+  if (config.python.device !== 'pi'){
+      pythonScript = './python/localDev.py';
+  }
+  console.log('starting python: script = ' + pythonScript);
+  pyShell = new PythonShell(pythonScript, {
     mode: 'text',
     // pythonOptions: ['-u'],
-    pythonPath: '/usr/bin/python2.7'
+    pythonPath: config.python.path
   }).on('error', function (error) {
     pythonErrored = error;
     console.log('--------------------------------------------------------');
