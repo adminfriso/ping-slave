@@ -9,7 +9,7 @@ module.exports = () => {
   let pattern = piPattern;
   let command = piCommand;
 
-  if (process.env.DEVICE === 'apple') {
+  if (process.env.DEVICE !== 'pi') {
     pattern = applePattern;
     command = appleCommand;
   }
