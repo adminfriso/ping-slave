@@ -1,7 +1,7 @@
 # commands:
 # s(ound),path,volume(0-1),wait(epoch-millis)
 # i(mage),path,duration(secs,0-...),wait(epoch-millis) of repeatTrue/repeatFalse
-# w(ait),file,volume,tijd(epoch-millis),up(milliseconds),stay(milliseconds),down(milliseconds)
+# w(ave),file,volume,tijd(epoch-millis),up(milliseconds),stay(milliseconds),down(milliseconds)
 # e(ffect),whiteoff
 # e(ffect),whiteon
 # e(ffect),whitepulseoff
