@@ -373,9 +373,12 @@ if __name__ == '__main__':
         if button.is_pressed:
             #print("Button is pressed")
             led.blink(0, 0, 0.1, 0.3, 1, True)  # ontime, offtime, fadeintime, fade out time, n-times, in background
-            sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-            tempString=subprocess.call("cat /proc/cpuinfo | grep ^Serial | cut -d':' -f2", shell=True)
-            sock.sendto(tempString.encode(), ("192.168.11.255",7149))
+            process = subprocess.Popen("cat /proc/cpuinfo | grep ^Serial | cut -d':' -f2", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            out, err = process.communicate()
+            server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+            server.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            server.sendto(out, ('255.255.255.255', 7149))
 
         try:
             com = raw_input("s/i/h/w/e/c/p,file,volume(,time)>")
