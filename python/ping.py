@@ -235,10 +235,7 @@ class LightSlave(threading.Thread):
                     frame = 0
             else:
                 # strip.show()
-                # was 0.001s: 1000 onnodige wake-ups/sec om alleen te checken
-                # of er een nieuw commando is. Bij 25fps (40ms per frame) is
-                # 4ms ruim voldoende marge en scheelt dit 4x zoveel context-switches.
-                time.sleep(0.004)
+                time.sleep(0.001)
             # check of tijd verloopt voor nieuwe frame
             elapsed = (time.time() * 1000) - starttijd
             if Beeld is not None:
@@ -255,12 +252,9 @@ class LightSlave(threading.Thread):
                         Beeld = None
                     frame += 1
                 else:
-                    # was 0.001s, zelfde reden als hierboven
-                    time.sleep(0.004)
+                    time.sleep(0.001)
             else:
-                # nog geen beeld geladen: hier mag de interval iets ruimer,
-                # er is dan sowieso niks te tonen
-                time.sleep(0.004)
+                time.sleep(0.001)
 
 
 class SoundSlave(threading.Thread):
