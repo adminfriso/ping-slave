@@ -46,23 +46,28 @@ On the beacon, as root (the master's `exec` already runs as root):
 |---|---|
 | `bash /root/ping-slave/system/performance-update/performance-update.sh status` | read-only; first line `PERFORMANCE-UPDATE OK v3` or `PERFORMANCE-UPDATE TODO <items>`, plus `REBOOT-NEEDED` when the bluetooth overlay waits for a reboot |
 | `... performance-update.sh apply` | prints `ok v3` (nothing to do), `changed <items>`, or `failed <items>`, then the status |
-| `... performance-update.sh apply-missing` | only when something is missing: an up-to-date beacon is not touched and prints `skip up to date v3` |
 | `... performance-update.sh revert` | undoes all five |
 
-From the control PC: the updater's buttons **Performance status (all)**, **Performance-update needed** (only the beacons
-that are not up to date) and **Performance-update ALL**, or `scripts\wifi-guard\wifi-guard-test.ps1` with
-`performance-status|performance-update|performance-update-missing <serial>` and `fleet performance-status`,
-`fleet performance-update-missing confirm`, `fleet performance-update confirm` (every connected beacon one by one, token
-check, summary). The tool sends the script from the ping-slave clone, so nothing needs to be deployed first.
+From the control PC: the updater's buttons **Performance status** (read-only) and **Performance-update ALL** (`apply` on
+every connected beacon one by one; beacons that are up to date answer `ok v3` and are not touched), or
+`scripts\wifi-guard\wifi-guard-test.ps1` with `performance-status|performance-update <serial>`, `fleet performance-status`
+and `fleet performance-update confirm` (token check, summary at the end). The tool sends the script from the ping-slave clone, so nothing needs to be deployed first.
 
 ## Rollout
 
 1. One beacon: `apply`, `apply` again (`ok v3`), `reboot`, wait 4 minutes, `status`: `PERFORMANCE-UPDATE OK`, no
    `REBOOT-NEEDED`, `hci0=gone`, `wlan0=off`, `governor: performance 1000 MHz`. Play light and sound on it.
 2. Five beacons the same way. Stop at the first surprise.
-3. **Performance-update needed** (or `fleet performance-update-missing confirm`), then reboot all at a quiet moment
+3. **Performance-update ALL** (or `fleet performance-update confirm`), then reboot all at a quiet moment
    (the bluetooth overlay needs it), then **Performance status (all)**. Not `exec all`: see the wifi-guard README, Known risks.
-4. Every later build-up: **Performance-update needed** again; it only touches beacons that are not up to date.
+4. Every later build-up: **Performance-update ALL** again; it only touches beacons that are not up to date.
+
+## Adding a step later (stacking updates)
+
+`apply` only sets the items whose check fails, so updates stack: add one item to the script (`<item>_ok`,
+`<item>_apply`, `<item>_revert`, the name in `ITEMS`), bump `VERSION`, add it to the table above, and run
+**Performance-update ALL**. Every beacon reports `TODO <item>` and gets only that item; the rest is not touched.
+Keep the check exact (the same file content, the same unit state) so a beacon never flips between OK and TODO.
 
 Upgrading from beacon-tuning v2 (`05447fc6`): the first run reports `changed powersave governor` because the hook and
 unit comments carry the new name; the backups move from `/var/lib/ping-beacon-tuning` to `/var/lib/ping-performance-update`.
@@ -82,3 +87,4 @@ unit comments carry the new name; the backups move from `/var/lib/ping-beacon-tu
 | 2026-10-04 13:55 | `05447fc6`: reboot (by Gijs) + `status` | `BEACON-TUNING OK v1`: power saving off at boot by the hook, `hci0=gone`, `ping.py` running | G + C |
 | 2026-10-04 13:57 | v2 (governor) on `05447fc6`: `apply`, `apply` again | `changed powersave governor` (the hook carries the version), then `ok v2`; 10 samples over 10 s: arm 1000 MHz, core 400 MHz, 56-57 °C, `throttled=0x0`; light + sound sent | G + C |
 | 2026-10-04 14:23 | `05447fc6`: reboot (14:19:59, back 14:23:18), read at 14:23:54 (up 2 min) | `scaling_governor=performance`: survives the reboot (the unit runs after raspi-config) | G + F |
+| 2026-10-04 | renamed to performance-update v3 (was beacon-tuning); Codex review: `REBOOT-NEEDED` from a boot-id marker (stopping hciuart already removes `hci0`), `revert` removes only the overlay lines this script added and enables only the bluetooth units that were enabled before; read-only `status` of v3 on `05447fc6` (`TODO powersave governor`: renamed comments) and `299acd7f` (all five TODO) | not applied yet | F + C |

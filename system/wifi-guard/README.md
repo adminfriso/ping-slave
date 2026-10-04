@@ -232,6 +232,7 @@ simulated log. Run it after every change to the script.
 | 2026-10-04 14:33 | `05447fc6` steps 5-6: `install live`, again | `changed mode:live`, external switched off, beacon stayed online; then `ok v3` | G + C |
 | 2026-10-04 14:33-14:37 | `05447fc6` step 7: reboot (back after 3 min 18 s), `status` | `WIFI-GUARD OK`, internal on, external off. Boot unit ran before the USB radio existed (`external=none`), the udev hotplug rule switched it off 8 s later. beacon-tuning still `OK v2` | G + C |
 | 2026-10-04 | review fixes: dry run logs a decision once (was every 15 s), `install.sh` locale typo fixed (and `>` instead of `>>`); radio survey of 11 beacons: internal stays primary | simulation 9/9 | F + C |
+| 2026-10-04 | Codex review: a swap switches the other radio on only when the first is verified off (`radio_off` checks `is_blocked`); active set to internal when the external radio disappears; `systemd-rfkill` masked only in live mode (dry unmasks); rollout back to install first, then unblock | simulation 9/9 | F + C |
 Tested with `wifi-guard-test.ps1` (now in ping-controller `scripts/wifi-guard/`; it was `C:\Shared\Development\ping-wifi-guard\`) (sends the script to the beacon as a
 here-document through the master, no branch needed; steps in `next.txt`, reports in `reports\`). The 4 beacons with a
 broken internal radio were not reachable, so steps 9-11 are still open.

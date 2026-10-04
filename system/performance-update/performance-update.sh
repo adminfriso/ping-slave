@@ -13,9 +13,11 @@
 #
 # Usage (as root; the master's exec already runs as root):
 #   performance-update.sh status   read-only: first line PERFORMANCE-UPDATE OK | TODO <items> [REBOOT-NEEDED], then details
-#   performance-update.sh apply    sets what is not set yet, prints ok v<N> | changed <items> | failed <reason>
-#   performance-update.sh apply-missing  like apply, but a beacon that is already up to date is not touched at
-#                                  all: prints "skip up to date v<N>" (for "only the beacons that still need it")
+#   performance-update.sh apply    sets only what is not set yet (an up-to-date beacon is not touched), prints
+#                                  ok v<N> | changed <items> | failed <reason>
+#
+# Stacking updates: a new step is one more item (<item>_ok, <item>_apply, <item>_revert, added to ITEMS) and a
+# VERSION bump. Every beacon then reports TODO <item> and the next apply sets only that item.
 #   performance-update.sh revert   undoes all five (bluetooth comes back after a reboot)
 #
 # It never reboots. Log: /var/log/ping-performance-update.log.
@@ -44,7 +46,7 @@ wifi_ifaces() {
 # ---------- powersave ----------
 hook_content() {
     cat <<EOF
-# ping performance-update v$VERSION: wifi power saving off (it adds delay and jitter to every command).
+# ping performance-update: wifi power saving off (it adds delay and jitter to every command).
 # Power saving comes back when a radio goes down and up (e.g. a wifi-guard switch), so set it on every connect.
 if [ "\$ifwireless" = "1" ]; then
     case "\$reason" in
@@ -84,7 +86,15 @@ bt_units_off() {
     done
     return 0
 }
-bt_reboot_needed() { bt_overlay_set && [ -e /sys/class/bluetooth/hci0 ]; }
+boot_id() { cat /proc/sys/kernel/random/boot_id 2>/dev/null; }
+# the overlay works from the next boot. hci0 is not a marker for that: stopping hciuart already removes it. So apply
+# records the boot it added the overlay in; still the same boot = reboot needed. (hci0 back with the overlay set also.)
+bt_reboot_needed() {
+    bt_overlay_set || return 1
+    [ -f "$BACKUP_DIR/bt-overlay-boot" ] && [ "$(cat "$BACKUP_DIR/bt-overlay-boot")" = "$(boot_id)" ] && return 0
+    [ -e /sys/class/bluetooth/hci0 ]
+}
+BT_COMMENT_RE='^# ping (beacon-tuning|performance-update): bluetooth off'   # marks the overlay line this script added
 bluetooth_ok() { bt_overlay_set && bt_units_off; }
 bluetooth_apply() {
     if ! bt_overlay_set; then
@@ -98,15 +108,34 @@ bluetooth_apply() {
             echo "dtoverlay=disable-bt"
         } >> "$CONFIG_TXT"
         sync
+        boot_id > "$BACKUP_DIR/bt-overlay-boot"
+    fi
+    # remember which units were enabled, so revert only enables those again
+    mkdir -p "$BACKUP_DIR"
+    if [ ! -f "$BACKUP_DIR/bt-units-enabled" ]; then
+        local u; for u in $BT_UNITS; do systemctl is-enabled -q "$u" 2>/dev/null && echo "$u"; done > "$BACKUP_DIR/bt-units-enabled"
     fi
     systemctl disable --now -q $BT_UNITS 2>/dev/null
 }
 bluetooth_revert() {
-    if bt_overlay_set; then
-        sed -i -e '/^# ping \(beacon-tuning\|performance-update\): bluetooth off/d' -e '/^\s*dtoverlay=disable-bt\s*$/d' "$CONFIG_TXT"
+    # remove only what this script added: our comment line and the dtoverlay line right after it. A disable-bt line
+    # that was there before stays (bluetooth then stays off, as it was).
+    if grep -qE "$BT_COMMENT_RE" "$CONFIG_TXT"; then
+        awk -v re="$BT_COMMENT_RE" '
+            skip && /^[ \t]*dtoverlay=disable-bt[ \t\r]*$/ { skip = 0; next }
+            { skip = 0 }
+            $0 ~ re { skip = 1; next }
+            { print }' "$CONFIG_TXT" > "$CONFIG_TXT.tmp" && cat "$CONFIG_TXT.tmp" > "$CONFIG_TXT" && rm -f "$CONFIG_TXT.tmp"
         sync
     fi
-    systemctl enable -q $BT_UNITS 2>/dev/null
+    rm -f "$BACKUP_DIR/bt-overlay-boot"
+    # enable only the units that were enabled before apply (v1-v2 did not record it: both, the Raspbian default)
+    if [ -f "$BACKUP_DIR/bt-units-enabled" ]; then
+        local u; for u in $(cat "$BACKUP_DIR/bt-units-enabled"); do systemctl enable -q "$u" 2>/dev/null; done
+        rm -f "$BACKUP_DIR/bt-units-enabled"
+    else
+        systemctl enable -q $BT_UNITS 2>/dev/null
+    fi
 }
 
 # ---------- timers ----------
@@ -223,13 +252,6 @@ cmd_apply() {
     cmd_status
 }
 
-cmd_apply_missing() {  # only the beacons that still need it: an up-to-date beacon is not touched (no log line either)
-    local i
-    for i in $ITEMS; do ${i}_ok || { cmd_apply; return; }; done
-    echo "skip up to date v$VERSION"
-    cmd_status
-}
-
 cmd_revert() {
     [ "$(id -u)" = "0" ] || { echo "failed not root"; exit 1; }
     migrate_backups
@@ -243,7 +265,6 @@ cmd_revert() {
 case "$1" in
     status) cmd_status ;;
     apply) cmd_apply ;;
-    apply-missing) cmd_apply_missing ;;
     revert) cmd_revert ;;
-    *) sed -n '2,21p' "$0"; exit 2 ;;
+    *) sed -n '2,23p' "$0"; exit 2 ;;
 esac
