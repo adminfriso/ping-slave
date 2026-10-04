@@ -52,6 +52,7 @@ scenario() {  # $1 name, $2 seconds to simulate, $3 events function, $4 check fu
                 exit 0
             fi
         }
+        $EVENTS  # the state at t=0 (e.g. a radio broken from boot), not only after the first sleep
         cmd_boot
         BOTH_ON=0  # the kernel had both up before the boot unit; count only what the guard does after that
         cmd_run
@@ -61,7 +62,7 @@ scenario() {  # $1 name, $2 seconds to simulate, $3 events function, $4 check fu
     local verdict
     verdict=$($4 "$active" "$switches" "$int" "$ext")
     [ "$both" = 1 ] && verdict="FAIL both radios on at once"
-    if [ "${verdict%% *}" = ok ]; then echo "ok    $1: $verdict"; else echo "FAIL  $1: $verdict"; FAILS=$((FAILS + 1)); fi
+    if [ "${verdict%% *}" = ok ]; then echo "ok    $1: $verdict"; else echo "FAIL  $1: $verdict"; sed 's/^/        /' "$TMP/$1/log"; FAILS=$((FAILS + 1)); fi
     rm -f "$TMP/result"
 }
 
@@ -80,22 +81,27 @@ no_events() { :; }
 internal_dies_at_300() { [ "$CLOCK" -ge 300 ] && WORKS_wlan0=0; }
 master_down_300_to_900() { if [ "$CLOCK" -ge 300 ] && [ "$CLOCK" -lt 900 ]; then MASTER=0; else MASTER=1; fi; }
 master_down_ext_blocked() { WORKS_wlan1=0; master_down_300_to_900; }
+network_down_300_to_700() { if [ "$CLOCK" -ge 300 ] && [ "$CLOCK" -lt 700 ]; then MASTER=0; GATEWAY=0; else MASTER=1; GATEWAY=1; fi; }
+network_down_ext_blocked() { WORKS_wlan1=0; network_down_300_to_700; }
 internal_broken() { WORKS_wlan0=0; }
 internal_broken_ext_blocked() { WORKS_wlan0=0; WORKS_wlan1=0; }
 
 check_stays_internal() { expect int 1 0 0 "$@"; }
 check_on_external() { expect ext 0 1 1 "$@"; }
 check_back_on_internal() { expect int 1 0 2 "$@"; }
+check_probes_back_off() { expect ext 0 1 7 "$@"; }  # failover + 3 failed probes (300, 600, 1200 s) = 7 switch-ons
 check_one_radio() {  # any radio, but exactly one on
     if [ $(($3 + $4)) -eq 1 ]; then echo "ok (on $1, one radio, $2 switch-ons)"; else echo "FAIL $3 + $4 radios on"; fi
 }
 
 scenario healthy-internal            3600 no_events                  check_stays_internal
-scenario internal-dies               1200 internal_dies_at_300       check_on_external
+scenario internal-dies-probes-back-off 3000 internal_dies_at_300     check_probes_back_off
 scenario internal-broken-from-boot    600 internal_broken            check_on_external
 PREV=ext scenario quick-failover-after-ext-boot 150 internal_broken check_on_external
-scenario master-down-10min           1500 master_down_300_to_900     check_back_on_internal
-scenario master-down-ext-blocked     2400 master_down_ext_blocked    check_back_on_internal
+scenario master-down-10min           1500 master_down_300_to_900     check_stays_internal
+scenario master-down-ext-blocked     2400 master_down_ext_blocked    check_stays_internal
+scenario network-down-7min-recovers  2400 network_down_300_to_700    check_back_on_internal
+scenario network-down-ext-blocked    2400 network_down_ext_blocked   check_back_on_internal
 scenario both-broken                 3600 internal_broken_ext_blocked check_one_radio
 
 [ "$FAILS" -eq 0 ] && echo "all scenarios ok" || { echo "$FAILS scenario(s) failed"; exit 1; }

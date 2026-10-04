@@ -1,6 +1,6 @@
 # Wi-Fi guard: one radio per beacon
 
-Written 2026-09-30 (Gijs + Claude, on the control PC). **Status: v1 live on the 4 working test beacons (`cde53af8`, `9e4fab63`, `226b5ac4`, `40ab815e`); v2 (2026-10-04) committed on ping-slave branch `feature/beacon-system`, passes the simulation test, not on a beacon yet. Next: install v2 on one test beacon (step 1), step 9 (Friso) for the 4 beacons with a broken internal radio.**
+Written 2026-09-30 (Gijs + Claude, on the control PC). **Status: v1 live on the 4 working test beacons (`cde53af8`, `9e4fab63`, `226b5ac4`, `40ab815e`); v2 on `feature/beacon-system`, v3 (probe back to internal after an outage, 2026-10-04) on `feature/wifi-guard-failback`; both pass the simulation, neither is on a beacon yet. Next: install v3 on one test beacon with both radios (step 1). Decided 2026-10-04 (F): all external radios are unblocked in UniFi before the fleet rollout.**
 Update the status table at the bottom whenever a step is done: this file is how Gijs and Friso stay in sync.
 
 ## Why
@@ -22,7 +22,8 @@ Update the status table at the bottom whenever a step is done: this file is how 
 | Boot | internal radio on, external radio off (`rfkill`), before the network starts |
 | Internal reaches the master | external stays off |
 | Internal fails for 120 s (30 s when the previous boot ended on external) | **swap**: internal off first, then external on (never both on) |
-| On external, external works | stays on external until the next boot |
+| On external, external works, internal worked earlier this boot | every 300 s: **probe** the internal (swap to it). Works within 90 s: stay on internal. Not: back to external, next probe after 600, 1200, ... up to 3600 s (v3) |
+| On external, external works, internal never worked this boot | stays on external until the next boot (broken antenna: no probes, so no needless outages) |
 | On external, external fails for 600 s | swap back to internal and try again |
 | Only one radio present | keeps that one on |
 
@@ -33,6 +34,13 @@ Update the status table at the bottom whenever a step is done: this file is how 
 - It recognises the radios **by driver** (`brcmfmac` = internal), not by name, because `wlan0`/`wlan1` can
   swap between boots.
 - A random 0–30 s delay before each switch stops all beacons switching at the same moment after an AP outage.
+- **Why probes (v3):** a network outage of more than 2 minutes (build-up, partial power cut) is common. Every beacon
+  that stayed powered then swaps to its external radio, and once the network is back that one works, so in v2 it
+  stayed there until a reboot. A radio can only be tested by switching to it, so a probe costs the beacon about
+  10-20 s offline when the internal works, and up to 90 s + reconnect when it does not (then rarer and rarer).
+- **The guard owns rfkill (v3):** `install` masks `systemd-rfkill` (`uninstall` unmasks it). It restored the
+  rfkill state saved at shutdown *after* the guard's boot unit had run (journal of `cde53af8`, 2026-10-04), so a
+  beacon shut down on its external radio could boot with the internal blocked.
 - Settings: `/etc/default/ping-wifi-guard` (made on install, never overwritten). Log:
   `/var/log/ping-wifi-guard.log`. State: `/run/ping-wifi-guard/active`, `/var/lib/ping-wifi-guard/last-active`.
 
@@ -44,7 +52,7 @@ On the beacon, as root (the master's `exec` already runs as root):
 |---|---|
 | `bash /root/ping-slave/system/wifi-guard/wifi-guard.sh status` | read-only; first line `WIFI-GUARD OK / TWO-RADIOS-ON-NETWORK / NO-RADIO-ASSOCIATED`, then both radios (driver, MAC, on/off, signal, ip) |
 | `... wifi-guard.sh install dry` | installs the guard in **dry run**: it only logs what it would switch |
-| `... wifi-guard.sh install live` | installs or updates it and lets it switch. Prints `ok v2` (nothing to do), `changed ...`, or `failed <reason>` |
+| `... wifi-guard.sh install live` | installs or updates it and lets it switch. Prints `ok v3` (nothing to do), `changed ...`, or `failed <reason>` |
 | `... wifi-guard.sh uninstall` | removes it and switches **both** radios on again (2 clients per beacon!) |
 
 From the control PC (`scripts\beacons` in ping-controller):
@@ -74,13 +82,13 @@ Who: **G** = Gijs (control PC), **F** = Friso, **C** = Claude. Nothing on the ma
 2. ~~**G/F** commit this folder on a new ping-slave branch~~ Done 2026-10-04: committed on `feature/beacon-system`
    (from `main`, only new files plus the README), together with `system/beacon-tuning/`.
 
-### 1. One working beacon (test beacon `00000000f0b5fdbc`)
+### 1. One working beacon (test beacon `0000000005447fc6`: both radios, external not associated; `f0b5fdbc` has no external radio)
 
 3. `deploy` the branch to it (above), then `status`: expect the internal radio `associated` with an ip, the
    external radio `on` but not associated (blocked in UniFi). Note both MACs.
 4. `install dry`, wait 5 minutes, `status`: the log must say `dry run: would switch off wlan1 (...)` and nothing else.
 5. `install live`, `status`: `WIFI-GUARD OK`, external `off`. The beacon stays connected to the master.
-6. Run `install live` again: it must print `ok v2` (proves it is idempotent).
+6. Run `install live` again: it must print `ok v3` (proves it is idempotent).
 7. `reboot`, wait 3 minutes, `status`: internal on, external off, log shows `boot:`.
 
 ### 2. The other 3 working beacons
@@ -89,26 +97,23 @@ Who: **G** = Gijs (control PC), **F** = Friso, **C** = Claude. Nothing on the ma
 
 ### 3. The 4 beacons with a broken internal radio
 
-9. **F decides how** to let only these onto the network through their external radio. The safe option: unblock
-   the external radios in UniFi **only while just the 8 test beacons are powered** (the 4 working ones then
-   already have their external radio off). F confirms that condition first.
+9. Decided 2026-10-04 (F): the external radios are unblocked in UniFi before the fleet rollout (step 14), so
+   these 4 come online then. Before that, only if F unblocks them early for a test.
 10. The 4 appear in `list` (through the external radio). `deploy` the branch, `install live`, `status`: expect
     `active=ext`, internal `off` or not associated, external associated.
 11. `reboot` one of them: it must come back through the external radio within about 1 minute (quick failover,
     because the previous boot ended on external).
-12. **F** blocks the external radios again in UniFi (if that is the plan) before the rest of the fleet powers on.
 
 ### 4. The whole fleet
 
 13. Merge `feature/beacon-system` into ping-slave `main` (F's call), so a normal `deploy` carries it.
-14. With the externals still **blocked** and the fleet powered: `deploy all`, then
-    `exec all "... wifi-guard.sh install live"` (asks for confirmation), then `exec all "... status"`.
-15. Repeat 14 until every connected beacon says `ok v2` and `WIFI-GUARD OK`. Compare with `list`: beacons that
-    were **not connected** don't have the guard yet. Write their serials in the status table below.
-16. **F** unblocks the external radios in UniFi **only when F is happy with 15**. Then broken-internal beacons
-    come online through their external radio: run `install live` on all again (the ones that already have it
-    say `ok`).
-17. Check in UniFi: client count ≈ number of powered beacons (~250, not ~500). `exec all "... status"`
+14. **F** unblocks the external radios in UniFi (decided 2026-10-04). Until a beacon has the guard it is on the
+    network with both radios, so the client count goes up (towards ~500) until 15 is done: do 15 right after.
+15. `deploy all`, then `install live` and `status` **per beacon** in a loop with the token check (see Known risks:
+    not `exec all`). Repeat until every connected beacon says `ok v3` and `WIFI-GUARD OK`. Compare with `list`:
+    beacons that were **not connected** don't have the guard yet. Write their serials in the status table below.
+16. The broken-internal beacons are online through their external radio now: they get the guard in 15 like the rest.
+17. Check in UniFi: client count ≈ number of powered beacons (~250, not ~500). `status` on every beacon (per-beacon loop)
     must show no `TWO-RADIOS-ON-NETWORK`.
 18. Every later build-up: re-run `install live` on all as part of the normal deploy. It's idempotent, so
     beacons that were missed get it.
@@ -143,10 +148,16 @@ Who: **G** = Gijs (control PC), **F** = Friso, **C** = Claude. Nothing on the ma
   takes it off the network. Don't send `p` (it's also broken: it crashes right after switching).
 - Beacons that are powered off during step 14 come up with both radios once the externals are unblocked, until
   step 18 reaches them.
-- v1 was tested on 4 beacons (status table). v2 only changes what counts as "works" (gateway added) and passes
-  the simulation; it still needs step 1 on a beacon. The 4 v1 beacons update to v2 with `install live`.
+- v1 was tested on 4 beacons (status table). v2 changes what counts as "works" (gateway added), v3 adds the probes
+  and masks systemd-rfkill; both pass the simulation and still need step 1 on a beacon. The 4 v1 beacons update
+  with `install live`.
 - When the master **and** the router are both unreachable for 2 minutes (AP or network outage), beacons still
-  swap radios. Once the network is back the external radio works, so they stay on it until the next boot.
+  swap radios. v3: once the network is back they probe the internal after 5 minutes and return to it.
+- **Fleet commands through the master: loop per beacon, don't use `exec all`.** The master's `/commands/execute`
+  (all) only answers when the number of replies equals the number of connected sockets, and it takes the first
+  reply a socket sends (`.once`). One beacon dropping mid-way, or a reply to another command, and the request hangs
+  until the 4-minute HTTP timeout (`res.setTimeout` in ping-master `src/services/express.js`) with no results,
+  although the command did run everywhere. Per-beacon calls with a token check (`wifi-guard-test.ps1`) are reliable.
 
 ## Simulation test
 
@@ -154,7 +165,9 @@ Who: **G** = Gijs (control PC), **F** = Friso, **C** = Claude. Nothing on the ma
 functions and replaces only the hardware: two radios, the clock, whether the master and the gateway answer. It
 checks after every switch that two radios are never on at once. Scenarios: healthy internal, internal dies,
 internal broken from boot, quick failover after a boot that ended on external, master down 10 min (with and
-without the external blocked in UniFi), both radios broken. Run it after every change to the script.
+without the external blocked in UniFi: 0 switches), whole network down 7 min (back on internal by a probe),
+internal dies for good (probes back off: 300, 600, 1200 s), both radios broken. A failing scenario prints its
+simulated log. Run it after every change to the script.
 
 ## Status
 
@@ -172,6 +185,8 @@ without the external blocked in UniFi), both radios broken. Run it after every c
 | 2026-10-04 | read-only `status` on `299acd7f` (guard not installed) | `TWO-RADIOS-ON-NETWORK`: internal and external (RT5370) both associated, same /22, two default routes | G + C |
 | 2026-10-04 | simulation test written; v1 failed "master down 10 min" (whole fleet would swap to external) | v2: gateway counts as works; all 7 scenarios pass, never two radios on | G + C |
 | 2026-10-04 | committed on ping-slave `feature/beacon-system`, test tool moved to ping-controller `scripts/wifi-guard/` | - | G + C |
+| 2026-10-04 | API preflight (read-only) on `05447fc6`, `cde53af8`, `299acd7f`, `f0b5fdbc` | exec runs as root under `dash` (so always `bash <script>`), node v10 in `/root/ping-slave`, all tools present (iw ip ping systemctl udevadm install timeout cmp wpa_cli lsusb), all install paths writable, root fs rw, rfkill on both radios (rt2800usb + brcmfmac), master socket on `wlan0` on all four. `f0b5fdbc` has **no external radio** (not a good guard test beacon); `cde53af8` swapped to external at 10:04 after a network outage (v1, gateway not counted) | F + C |
+| 2026-10-04 | v3: probes back to internal after an outage, systemd-rfkill masked; simulation 9 scenarios ok (v2 fails `network-down-7min-recovers`) | branch `feature/wifi-guard-failback`, not on a beacon yet | F + C |
 
 Tested with `wifi-guard-test.ps1` (now in ping-controller `scripts/wifi-guard/`; it was `C:\Shared\Development\ping-wifi-guard\`) (sends the script to the beacon as a
 here-document through the master, no branch needed; steps in `next.txt`, reports in `reports\`). The 4 beacons with a
