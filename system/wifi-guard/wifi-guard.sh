@@ -64,6 +64,10 @@ trim_log() {
     [ -f "$LOG" ] && [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 262144 ] &&
         tail -n 2000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
 }
+dry_log() {  # dry run: log a decision only when it differs from the last one (the loop repeats it every INTERVAL s)
+    [ "$(cat "$RUN_DIR/dry-last" 2>/dev/null)" = "$*" ] && return 0
+    mkdir -p "$RUN_DIR"; echo "$*" > "$RUN_DIR/dry-last"; log "$*"
+}
 uptime_s() { cut -d. -f1 /proc/uptime; }
 
 # ---------- radios ----------
@@ -97,7 +101,7 @@ is_blocked() {  # 0 = switched off (rfkill soft block, or link admin down when t
 radio_off() {
     [ -n "$1" ] || return 0
     is_blocked "$1" && return 0
-    if [ "$ENABLED" != "1" ]; then log "dry run: would switch off $1 ($(driver_of "$1"))"; return 0; fi
+    if [ "$ENABLED" != "1" ]; then dry_log "dry run: would switch off $1 ($(driver_of "$1"))"; return 0; fi
     local r; r=$(rfkill_path "$1")
     if [ -n "$r" ]; then echo 1 > "$r/soft"; else
         wpa_cli -i "$1" disconnect >/dev/null 2>&1; ip link set "$1" down; fi
@@ -106,7 +110,7 @@ radio_off() {
 radio_on() {
     [ -n "$1" ] || return 0
     is_blocked "$1" || return 0
-    if [ "$ENABLED" != "1" ]; then log "dry run: would switch on $1 ($(driver_of "$1"))"; return 0; fi
+    if [ "$ENABLED" != "1" ]; then dry_log "dry run: would switch on $1 ($(driver_of "$1"))"; return 0; fi
     local r; r=$(rfkill_path "$1")
     if [ -n "$r" ]; then echo 0 > "$r/soft"; else
         ip link set "$1" up; wpa_cli -i "$1" reconnect >/dev/null 2>&1; fi

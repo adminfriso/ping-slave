@@ -49,6 +49,34 @@ Update the status table at the bottom whenever a step is done: this file is how 
 - Settings: `/etc/default/ping-wifi-guard` (made on install, never overwritten). Log:
   `/var/log/ping-wifi-guard.log`. State: `/run/ping-wifi-guard/active`, `/var/lib/ping-wifi-guard/last-active`.
 
+## Why the internal radio is the primary (measured 2026-10-04)
+
+The internal radio is hard-coded as the preferred one. Hardware: internal = Cypress CYW43438 on the Pi Zero W (PCB
+antenna, `brcmfmac`); external = Ralink RT5370 USB adapter (`148f:5370`, `rt2800usb`) on the micro-USB OTG port.
+Both are the same class: 2.4 GHz only, one antenna, 802.11n, 72 Mbit/s link at 20 MHz.
+
+Signal of the **same access point** seen by both radios (read-only; internal: `iw link`, external: `iw scan` of that
+BSSID while it was on but not associated; `299acd7f` had both associated). dBm, higher is better:
+
+| Beacon | internal | external | difference |
+|---|---|---|---|
+| `25cd1d0a` | -45 | -47 | internal +2 |
+| `0e7ab203` | -43 | -55 | internal +12 |
+| `190d23d5` | -54 | -57 | internal +3 |
+| `8f5cea45` | -60 | -57 | external +3 |
+| `34c1d188` | -58 | -63 | internal +5 |
+| `821d7fe4` | -57 | -81 | internal +24 |
+| `2d782d5b` | -48 | -57 | internal +9 |
+| `f347b8fd` | -55 | -47 | external +8 |
+| `1b1a1cc7` | -57 | -65 | internal +8 |
+| `a4c00b23` | -56 | -61 | internal +5 |
+| `299acd7f` | -50 | -59 | internal +9 |
+
+Internal stronger on 9 of 11, median **5 dB** better; every internal link ran at 58-72 Mbit/s without retries. The
+external also hangs on a USB adapter (an extra contact that can work loose, extra power). One scan per beacon is
+noisy (a few dB); `821d7fe4` (-81 external) may have a badly seated adapter. Decided (F, 2026-10-04): internal stays
+primary, no setting to switch it. (T5, a node-side `PING_ANTENNA` choice on a never-pushed branch, is dropped.)
+
 ## Commands (all idempotent, safe to push again)
 
 On the beacon, as root (the master's `exec` already runs as root):
@@ -56,7 +84,7 @@ On the beacon, as root (the master's `exec` already runs as root):
 | Command | Effect |
 |---|---|
 | `bash /root/ping-slave/system/wifi-guard/wifi-guard.sh status` | read-only; first line `WIFI-GUARD OK / TWO-RADIOS-ON-NETWORK / NO-RADIO-ASSOCIATED`, then both radios (driver, MAC, on/off, signal, ip) |
-| `... wifi-guard.sh install dry` | installs the guard in **dry run**: it only logs what it would switch |
+| `... wifi-guard.sh install dry` | installs the guard in **dry run**: it only logs what it would switch, each decision once until it changes (not every 15 s: SD card writes) |
 | `... wifi-guard.sh install live` | installs or updates it and lets it switch. Prints `ok v3` (nothing to do), `changed ...`, or `failed <reason>` |
 | `... wifi-guard.sh uninstall` | removes it and switches **both** radios on again (2 clients per beacon!) |
 
@@ -199,6 +227,7 @@ simulated log. Run it after every change to the script.
 | 2026-10-04 14:26-14:33 | `05447fc6` step 4: `install dry` (first v3 build, then reinstalled with 4df7b20) | 7 min: only `dry run: would switch off wlan1` every 15 s; `systemd-rfkill` service + socket masked | G + C |
 | 2026-10-04 14:33 | `05447fc6` steps 5-6: `install live`, again | `changed mode:live`, external switched off, beacon stayed online; then `ok v3` | G + C |
 | 2026-10-04 14:33-14:37 | `05447fc6` step 7: reboot (back after 3 min 18 s), `status` | `WIFI-GUARD OK`, internal on, external off. Boot unit ran before the USB radio existed (`external=none`), the udev hotplug rule switched it off 8 s later. beacon-tuning still `OK v2` | G + C |
+| 2026-10-04 | review fixes: dry run logs a decision once (was every 15 s), `install.sh` locale typo fixed (and `>` instead of `>>`); radio survey of 11 beacons: internal stays primary | simulation 9/9 | F + C |
 Tested with `wifi-guard-test.ps1` (now in ping-controller `scripts/wifi-guard/`; it was `C:\Shared\Development\ping-wifi-guard\`) (sends the script to the beacon as a
 here-document through the master, no branch needed; steps in `next.txt`, reports in `reports\`). The 4 beacons with a
 broken internal radio were not reachable, so steps 9-11 are still open.

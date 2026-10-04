@@ -35,10 +35,10 @@ raspi-config
 #check installed locales (setted up in raspi-config)
 locale -a
 cd /etc/default
-cat <<EOT >> locale
+cat <<EOT > locale
 LANG=en_US.utf8
 LANGUAGE=en_US.utf8
-LC_CTYPE="en_US.utf8
+LC_CTYPE="en_US.utf8"
 LC_NUMERIC="en_US.utf8"
 LC_TIME="en_US.utf8"
 LC_COLLATE="en_US.utf8"
