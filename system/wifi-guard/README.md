@@ -22,7 +22,7 @@ Update the status table at the bottom whenever a step is done: this file is how 
 | Boot | internal radio on, external radio off (`rfkill`), before the network starts |
 | Internal reaches the master | external stays off |
 | Internal fails for 120 s (30 s when the previous boot ended on external) | **swap**: internal off first, then external on (never both on) |
-| On external, external works, internal worked earlier this boot | every 300 s: **probe** the internal (swap to it). Works within 90 s: stay on internal. Not: back to external, next probe after 600, 1200, ... up to 3600 s (v3) |
+| On external, external works, internal worked earlier this boot | after 300 s: **probe**: the internal is switched on **next to** the external (two radios for at most 90 s, the beacon stays online). Internal works (master or gateway answers through it): external off, back on internal. Not: internal off again, next probe after 600, 1200, ... up to 3600 s (v3) |
 | On external, external works, internal never worked this boot | stays on external until the next boot (broken antenna: no probes, so no needless outages) |
 | On external, external fails for 600 s | swap back to internal and try again |
 | Only one radio present | keeps that one on |
@@ -36,8 +36,13 @@ Update the status table at the bottom whenever a step is done: this file is how 
 - A random 0–30 s delay before each switch stops all beacons switching at the same moment after an AP outage.
 - **Why probes (v3):** a network outage of more than 2 minutes (build-up, partial power cut) is common. Every beacon
   that stayed powered then swaps to its external radio, and once the network is back that one works, so in v2 it
-  stayed there until a reboot. A radio can only be tested by switching to it, so a probe costs the beacon about
-  10-20 s offline when the internal works, and up to 90 s + reconnect when it does not (then rarer and rarer).
+  stayed there until a reboot. A probe switches the internal on next to the external, so the beacon never goes
+  offline; two radios on for at most 90 s is fine (F, 2026-10-04). During a probe only checks bound to the internal
+  radio count (`ping -I`; the TCP fallback is skipped because it could pass through the external). Checked
+  2026-10-04 on `05447fc6` and `299acd7f`: master and gateway answer ICMP through `wlan0`. When the external goes
+  off, the node app's socket on it drops and reconnects through the internal (a few seconds). `status` shows
+  `(probing internal)` while a probe runs.
+- **Two radios are only ever on during a probe** (at most `PROBE_WINDOW` s); the simulation fails on anything else.
 - **The guard owns rfkill (v3):** `install` masks `systemd-rfkill` (`uninstall` unmasks it). It restored the
   rfkill state saved at shutdown *after* the guard's boot unit had run (journal of `cde53af8`, 2026-10-04), so a
   beacon shut down on its external radio could boot with the internal blocked.
@@ -166,7 +171,8 @@ functions and replaces only the hardware: two radios, the clock, whether the mas
 checks after every switch that two radios are never on at once. Scenarios: healthy internal, internal dies,
 internal broken from boot, quick failover after a boot that ended on external, master down 10 min (with and
 without the external blocked in UniFi: 0 switches), whole network down 7 min (back on internal by a probe),
-internal dies for good (probes back off: 300, 600, 1200 s), both radios broken. A failing scenario prints its
+internal dies for good (probes back off: 300, 600, 1200 s, the external stays on), both radios broken. It fails
+when two radios are on outside a probe or for longer than `PROBE_WINDOW` + one interval. A failing scenario prints its
 simulated log. Run it after every change to the script.
 
 ## Status
@@ -187,6 +193,7 @@ simulated log. Run it after every change to the script.
 | 2026-10-04 | committed on ping-slave `feature/beacon-system`, test tool moved to ping-controller `scripts/wifi-guard/` | - | G + C |
 | 2026-10-04 | API preflight (read-only) on `05447fc6`, `cde53af8`, `299acd7f`, `f0b5fdbc` | exec runs as root under `dash` (so always `bash <script>`), node v10 in `/root/ping-slave`, all tools present (iw ip ping systemctl udevadm install timeout cmp wpa_cli lsusb), all install paths writable, root fs rw, rfkill on both radios (rt2800usb + brcmfmac), master socket on `wlan0` on all four. `f0b5fdbc` has **no external radio** (not a good guard test beacon); `cde53af8` swapped to external at 10:04 after a network outage (v1, gateway not counted) | F + C |
 | 2026-10-04 | v3: probes back to internal after an outage, systemd-rfkill masked; simulation 9 scenarios ok (v2 fails `network-down-7min-recovers`) | branch `feature/wifi-guard-failback`, not on a beacon yet | F + C |
+| 2026-10-04 | v3 probe changed: internal on **next to** the external (no offline gap), ICMP-only checks during a probe; ICMP to master and gateway through `wlan0` verified on `05447fc6`, `299acd7f`; simulation 9/9 | not on a beacon yet | F + C |
 
 Tested with `wifi-guard-test.ps1` (now in ping-controller `scripts/wifi-guard/`; it was `C:\Shared\Development\ping-wifi-guard\`) (sends the script to the beacon as a
 here-document through the master, no branch needed; steps in `next.txt`, reports in `reports\`). The 4 beacons with a

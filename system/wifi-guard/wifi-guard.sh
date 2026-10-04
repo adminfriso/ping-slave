@@ -9,8 +9,9 @@
 #   - on the external radio: tries the internal again when the external fails for FAILBACK_AFTER s, at the
 #     next boot (every boot starts with the external off and the internal first), and (v3) every PROBE_EVERY s
 #     while the external works if the internal worked earlier this boot: after a network outage (build-up,
-#     partial power cut) a beacon returns to its internal radio by itself. A failed probe goes back to the
-#     external after PROBE_WINDOW s and doubles the wait (up to PROBE_MAX);
+#     partial power cut) a beacon returns to its internal radio by itself. A probe switches the internal on
+#     NEXT TO the external (two radios for at most PROBE_WINDOW s, never offline); internal works: external off;
+#     not: internal off again and the wait doubles (up to PROBE_MAX). The only time two radios are on;
 #   - "works" = associated, an IPv4 address, and the master or the gateway answers (v2: a master restart
 #     made every beacon swap radios in v1);
 #   - owns the rfkill state: systemd-rfkill is masked on install (v3), it restored a radio state saved at
@@ -50,7 +51,7 @@ FAILOVER_AFTER=120   # s internal failing before switching to the external radio
 QUICK_FAILOVER=30    # same, when the previous boot ended on the external radio (broken internal)
 FAILBACK_AFTER=600   # s external failing before trying the internal radio again
 PROBE_EVERY=300      # s on a working external before trying the internal again (only if it worked this boot); 0 = never
-PROBE_WINDOW=90      # s a probed internal gets to work before going back to the external
+PROBE_WINDOW=90      # s a probed internal gets to work (both radios on meanwhile) before it is switched off again
 PROBE_MAX=3600       # s, the wait doubles after every failed probe up to this
 MIN_SIGNAL=0         # dBm, e.g. -85: internal weaker than this counts as failing; 0 = off
 JITTER=30            # s, random extra wait before a switch so beacons do not all switch at once
@@ -118,6 +119,7 @@ ip4_of() { ip -4 -o addr show dev "$1" 2>/dev/null | awk '{print $4}' | cut -d/ 
 reaches_master() {
     ping -I "$1" -c 1 -W 2 "$MASTER_IP" >/dev/null 2>&1 && return 0
     ping -I "$1" -c 1 -W 2 "$MASTER_IP" >/dev/null 2>&1 && return 0
+    [ "$ICMP_ONLY" = 1 ] && return 1  # /dev/tcp is not bound to the radio: with two radios up it can pass via the other
     timeout 3 bash -c "</dev/tcp/$MASTER_IP/$MASTER_PORT" >/dev/null 2>&1
 }
 reaches_gateway() {  # the default gateway of this radio (the router), so a master restart is not a radio failure
@@ -150,7 +152,7 @@ active_set() {  # RUN_DIR is per boot (tmpfs); STATE_DIR/last-active survives a 
     [ "$(cat "$STATE_DIR/last-active" 2>/dev/null)" = "$1" ] || echo "$1" > "$STATE_DIR/last-active"
 }
 
-# ---------- switching (order matters: off first, then on, never two radios on) ----------
+# ---------- switching (order matters: off first, then on, two radios on only during a probe) ----------
 use_internal() { radio_off "$EXT"; radio_on "$INT"; active_set int; }
 use_external() { radio_off "$INT"; radio_on "$EXT"; active_set ext; }
 
@@ -163,6 +165,7 @@ cmd_status() {
     for i in $INT $EXT; do associated "$i" && n=$((n + 1)); done
     case $n in 1) verdict=OK ;; 0) verdict=NO-RADIO-ASSOCIATED ;; *) verdict=TWO-RADIOS-ON-NETWORK ;; esac
     [ -z "$EXT" ] && [ $n -eq 1 ] && verdict="OK (no external radio seen)"
+    [ -f "$RUN_DIR/probing" ] && verdict="$verdict (probing internal)"
     echo "WIFI-GUARD $verdict installed=$inst service=$svc enabled=$ENABLED active=$(active_get || echo -) last=$(cat "$STATE_DIR/last-active" 2>/dev/null || echo -)"
     echo "  internal: $(describe "$INT")"
     echo "  external: $(describe "$EXT")"
@@ -193,7 +196,8 @@ cmd_hotplug() {  # udev: a wlan interface appeared (the USB radio can appear aft
 
 cmd_run() {
     mkdir -p "$RUN_DIR" "$STATE_DIR"
-    local bad_since=0 since_switch now jit a failover probing=0 probe_every=$PROBE_EVERY
+    local bad_since=0 since_switch now jit a failover probing=0 probe_every=$PROBE_EVERY next_probe=0 probe_start=0
+    rm -f "$RUN_DIR/probing"
     since_switch=$(uptime_s)
     [ "$(uptime_s)" -lt "$BOOT_GRACE" ] && since_switch=0
     log "guard v$VERSION started (enabled=$ENABLED)"
@@ -213,21 +217,12 @@ cmd_run() {
 
         if [ "$a" = "int" ]; then
             radio_off "$EXT"; radio_on "$INT"
+            next_probe=0
             failover=$FAILOVER_AFTER
             [ "$(cat "$RUN_DIR/previous-boot" 2>/dev/null)" = "ext" ] && failover=$QUICK_FAILOVER
             if healthy "$INT"; then
                 bad_since=0
                 [ -f "$RUN_DIR/int-worked" ] || touch "$RUN_DIR/int-worked"
-                if [ "$probing" = 1 ]; then
-                    probing=0; probe_every=$PROBE_EVERY
-                    log "probe: internal $INT works again, staying on internal"
-                fi
-            elif [ "$probing" = 1 ]; then  # a probe gets PROBE_WINDOW s, no jitter, then back to the external
-                if [ $((now - since_switch)) -ge "$PROBE_WINDOW" ]; then
-                    probe_every=$((probe_every * 2)); [ "$probe_every" -gt "$PROBE_MAX" ] && probe_every=$PROBE_MAX
-                    log "probe: internal $INT still failing after $PROBE_WINDOW s, back to external $EXT (next probe in $probe_every s)"
-                    use_external; probing=0; since_switch=$(uptime_s)
-                fi
             elif [ $((now - since_switch)) -ge "$BOOT_GRACE" ]; then
                 [ "$bad_since" -eq 0 ] && { bad_since=$now; log "internal $INT failing: $(describe "$INT")"; }
                 if [ $((now - bad_since)) -ge "$failover" ]; then
@@ -238,16 +233,30 @@ cmd_run() {
                     fi
                 fi
             fi
+        elif [ "$probing" = 1 ]; then
+            # probe (v3): the internal is switched on NEXT TO the working external (2 clients for at most
+            # PROBE_WINDOW s, so the beacon never goes offline). Only checks bound to the internal radio count.
+            radio_on "$EXT"; radio_on "$INT"
+            if ICMP_ONLY=1 healthy "$INT"; then
+                log "probe: internal $INT works again: switch off external $EXT, back on internal"
+                use_internal; probing=0; probe_every=$PROBE_EVERY; next_probe=0; bad_since=0; since_switch=$(uptime_s)
+                rm -f "$RUN_DIR/probing"
+            elif [ $((now - probe_start)) -ge "$PROBE_WINDOW" ]; then
+                probe_every=$((probe_every * 2)); [ "$probe_every" -gt "$PROBE_MAX" ] && probe_every=$PROBE_MAX
+                log "probe: internal $INT still failing after $PROBE_WINDOW s, switched off again (next probe in $probe_every s)"
+                radio_off "$INT"; probing=0; next_probe=$((now + probe_every))
+                rm -f "$RUN_DIR/probing"
+            fi
         else
             radio_off "$INT"; radio_on "$EXT"
+            [ "$next_probe" -eq 0 ] && next_probe=$((now + probe_every))
             if healthy "$EXT"; then
                 bad_since=0
-                # the internal worked earlier this boot, so the swap was probably a network outage: try it again
-                # (a radio can only be tested by switching to it; one that never worked this boot is not probed)
-                if [ "$PROBE_EVERY" != "0" ] && [ -f "$RUN_DIR/int-worked" ] &&
-                    [ $((now - since_switch)) -ge "$probe_every" ]; then
-                    log "probe: external $EXT works, try internal $INT again"
-                    use_internal; probing=1; since_switch=$(uptime_s)
+                # the internal worked earlier this boot, so the swap was probably a network outage: try it again.
+                # One that never worked this boot (broken antenna) is not probed.
+                if [ "$PROBE_EVERY" != "0" ] && [ -f "$RUN_DIR/int-worked" ] && [ "$now" -ge "$next_probe" ]; then
+                    log "probe: external $EXT works, switch on internal $INT next to it for at most $PROBE_WINDOW s"
+                    radio_on "$INT"; probing=1; probe_start=$now; touch "$RUN_DIR/probing"
                 fi
             elif [ $((now - since_switch)) -ge "$BOOT_GRACE" ]; then
                 [ "$bad_since" -eq 0 ] && { bad_since=$now; log "external $EXT failing: $(describe "$EXT")"; }
