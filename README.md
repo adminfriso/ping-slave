@@ -119,3 +119,21 @@ e,statuson
 * **Gijs van Bon - van Bon** - *Artist & Python* - [GvBon](https://github.com/GvBon)
 
 
+
+# Working agreement (Gijs + Friso)
+
+Gijs and Friso work on Ping on different machines at different times. So **all work on Ping is written
+down in the repo**, in the same commit as the change: what was done, why, what is still open, and anything
+that was decided or measured. Nothing lives only in a chat, a terminal or someone's head.
+
+- ping-slave: this README, plus a README next to each part (for example `system/wifi-guard/README.md`).
+- ping-controller: `AGENTS.md`, `docs/HANDOFF.md`, `docs/STATUS.md`, `docs/fix-log.md`.
+- Every runbook ends with a status table (date, step, result, who). Update it when a step is done.
+- Network or UniFi changes are written down only once the person who made them has confirmed them.
+
+# System parts
+
+- [`system/wifi-guard/`](system/wifi-guard/README.md): keeps at most one wifi radio of a beacon on the
+  network (internal first, external as fallback). Being tested on the test beacons, see its status table.
+- [`system/beacon-tuning/`](system/beacon-tuning/README.md): system settings for every beacon (wifi power saving
+  off, bluetooth off, no apt/man-db timers, locale typo from `install.sh` fixed). Idempotent, see its status table.
