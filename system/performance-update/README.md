@@ -1,4 +1,7 @@
-# Beacon tuning: system settings for every beacon
+# Performance update: system settings for every beacon
+
+(Called "beacon-tuning" until 2026-10-04 (v1-v2); renamed so "tuning" stays free for audio tuning. The status
+table below keeps the old names as they were logged.)
 
 Written 2026-10-04 (Gijs + Claude, on the control PC). **Status: v1 applied and rebooted on 1 beacon (`05447fc6`): OK.
 v2 (governor) applied there and survives a reboot. Next: step 2 of the rollout (five beacons).**
@@ -23,17 +26,17 @@ the sound uses I2S (hifiberry-dac); neither uses the UART that `disable-bt` move
 
 ## What the script does
 
-`beacon-tuning.sh` sets only what is not set yet, so it is safe to run again on every beacon at every build-up:
+`performance-update.sh` sets only what is not set yet, so it is safe to run again on every beacon at every build-up:
 
 | Item | Change | Undo (`revert`) |
 |---|---|---|
 | `powersave` | dhcpcd hook `/lib/dhcpcd/dhcpcd-hooks/05-ping-wifi-powersave` switches power saving off on every wifi radio at every connect (also after a wifi-guard switch), and now on the radios that are up | hook removed, power saving on |
-| `bluetooth` | `dtoverlay=disable-bt` appended to `/boot/config.txt` in an `[all]` section (backup in `/var/lib/ping-beacon-tuning/config.txt`); `hciuart` and `bluetooth` disabled and stopped. The overlay works from the next boot | overlay line removed, services enabled (back after a reboot) |
+| `bluetooth` | `dtoverlay=disable-bt` appended to `/boot/config.txt` in an `[all]` section (backup in `/var/lib/ping-performance-update/config.txt`); `hciuart` and `bluetooth` disabled and stopped. The overlay works from the next boot | overlay line removed, services enabled (back after a reboot) |
 | `timers` | the three timers masked (`systemctl mask --now`); `logrotate.timer` stays | unmasked and enabled |
-| `locale` | `/etc/default/locale` rewritten with the same values, quotes fixed (backup in `/var/lib/ping-beacon-tuning/locale`) | backup put back |
+| `locale` | `/etc/default/locale` rewritten with the same values, quotes fixed (backup in `/var/lib/ping-performance-update/locale`) | backup put back |
 | `governor` | `ping-cpu-performance.service` (oneshot, after `raspi-config`) sets `performance` at every boot, and now | unit removed, `ondemand` |
 
-It never reboots. Log: `/var/log/ping-beacon-tuning.log`.
+It never reboots. Log: `/var/log/ping-performance-update.log`.
 
 ## Commands
 
@@ -41,21 +44,28 @@ On the beacon, as root (the master's `exec` already runs as root):
 
 | Command | Effect |
 |---|---|
-| `bash /root/ping-slave/system/beacon-tuning/beacon-tuning.sh status` | read-only; first line `BEACON-TUNING OK v2` or `BEACON-TUNING TODO <items>`, plus `REBOOT-NEEDED` when the bluetooth overlay waits for a reboot |
-| `... beacon-tuning.sh apply` | prints `ok v2` (nothing to do), `changed <items>`, or `failed <items>`, then the status |
-| `... beacon-tuning.sh revert` | undoes all five |
+| `bash /root/ping-slave/system/performance-update/performance-update.sh status` | read-only; first line `PERFORMANCE-UPDATE OK v3` or `PERFORMANCE-UPDATE TODO <items>`, plus `REBOOT-NEEDED` when the bluetooth overlay waits for a reboot |
+| `... performance-update.sh apply` | prints `ok v3` (nothing to do), `changed <items>`, or `failed <items>`, then the status |
+| `... performance-update.sh apply-missing` | only when something is missing: an up-to-date beacon is not touched and prints `skip up to date v3` |
+| `... performance-update.sh revert` | undoes all five |
 
-From the control PC, before the branch is merged: `scripts\wifi-guard\wifi-guard-test.ps1 tuning-status|tuning-apply <serial>`
-in ping-controller sends the script from the ping-slave clone and runs it (nothing needs to be deployed first). After the merge: `deploy`, then
-`.\beacons.ps1 exec <serial|all> "bash /root/ping-slave/system/beacon-tuning/beacon-tuning.sh apply"`.
+From the control PC: the updater's buttons **Performance status (all)**, **Performance-update needed** (only the beacons
+that are not up to date) and **Performance-update ALL**, or `scripts\wifi-guard\wifi-guard-test.ps1` with
+`performance-status|performance-update|performance-update-missing <serial>` and `fleet performance-status`,
+`fleet performance-update-missing confirm`, `fleet performance-update confirm` (every connected beacon one by one, token
+check, summary). The tool sends the script from the ping-slave clone, so nothing needs to be deployed first.
 
 ## Rollout
 
-1. One beacon: `apply`, `apply` again (`ok v2`), `reboot`, wait 4 minutes, `status`: `BEACON-TUNING OK`, no
+1. One beacon: `apply`, `apply` again (`ok v3`), `reboot`, wait 4 minutes, `status`: `PERFORMANCE-UPDATE OK`, no
    `REBOOT-NEEDED`, `hci0=gone`, `wlan0=off`, `governor: performance 1000 MHz`. Play light and sound on it.
 2. Five beacons the same way. Stop at the first surprise.
-3. Merge into `main`, `deploy all`, `exec all "... apply"`, then reboot all at a quiet moment, then `exec all "... status"`.
-4. Every later build-up: run `apply` on all again; it only changes beacons that missed it.
+3. **Performance-update needed** (or `fleet performance-update-missing confirm`), then reboot all at a quiet moment
+   (the bluetooth overlay needs it), then **Performance status (all)**. Not `exec all`: see the wifi-guard README, Known risks.
+4. Every later build-up: **Performance-update needed** again; it only touches beacons that are not up to date.
+
+Upgrading from beacon-tuning v2 (`05447fc6`): the first run reports `changed powersave governor` because the hook and
+unit comments carry the new name; the backups move from `/var/lib/ping-beacon-tuning` to `/var/lib/ping-performance-update`.
 
 ## Not in this script
 

@@ -1,5 +1,6 @@
 #!/bin/bash
-# ping-beacon-tuning: system settings for a Ping beacon (Pi Zero W, Raspbian buster), idempotent.
+# ping-performance-update: system settings for a Ping beacon (Pi Zero W, Raspbian buster), idempotent.
+# (was beacon-tuning v1-v2; renamed so "tuning" stays free for audio tuning.)
 #
 # What it sets (see README.md next to this file for the why):
 #   powersave  wifi power saving off on every wifi radio, now and at every (re)connect (dhcpcd hook)
@@ -11,19 +12,22 @@
 #              (ping-cpu-performance.service, runs after raspi-config's init script that sets ondemand)
 #
 # Usage (as root; the master's exec already runs as root):
-#   beacon-tuning.sh status   read-only: first line BEACON-TUNING OK | TODO <items> [REBOOT-NEEDED], then details
-#   beacon-tuning.sh apply    sets what is not set yet, prints ok v<N> | changed <items> | failed <reason>
-#   beacon-tuning.sh revert   undoes all five (bluetooth comes back after a reboot)
+#   performance-update.sh status   read-only: first line PERFORMANCE-UPDATE OK | TODO <items> [REBOOT-NEEDED], then details
+#   performance-update.sh apply    sets what is not set yet, prints ok v<N> | changed <items> | failed <reason>
+#   performance-update.sh apply-missing  like apply, but a beacon that is already up to date is not touched at
+#                                  all: prints "skip up to date v<N>" (for "only the beacons that still need it")
+#   performance-update.sh revert   undoes all five (bluetooth comes back after a reboot)
 #
-# It never reboots. Log: /var/log/ping-beacon-tuning.log.
+# It never reboots. Log: /var/log/ping-performance-update.log.
 
-VERSION=2
+VERSION=3
 
-LOG=/var/log/ping-beacon-tuning.log
+LOG=/var/log/ping-performance-update.log
 CONFIG_TXT=/boot/config.txt
 DHCPCD_HOOK=/lib/dhcpcd/dhcpcd-hooks/05-ping-wifi-powersave
 LOCALE_FILE=/etc/default/locale
-BACKUP_DIR=/var/lib/ping-beacon-tuning
+BACKUP_DIR=/var/lib/ping-performance-update
+OLD_BACKUP_DIR=/var/lib/ping-beacon-tuning   # v1-v2 (beacon-tuning): moved to BACKUP_DIR on apply/revert
 TIMERS="apt-daily.timer apt-daily-upgrade.timer man-db.timer"
 BT_UNITS="hciuart.service bluetooth.service"
 GOV_UNIT=/etc/systemd/system/ping-cpu-performance.service
@@ -40,7 +44,7 @@ wifi_ifaces() {
 # ---------- powersave ----------
 hook_content() {
     cat <<EOF
-# ping beacon-tuning v$VERSION: wifi power saving off (it adds delay and jitter to every command).
+# ping performance-update v$VERSION: wifi power saving off (it adds delay and jitter to every command).
 # Power saving comes back when a radio goes down and up (e.g. a wifi-guard switch), so set it on every connect.
 if [ "\$ifwireless" = "1" ]; then
     case "\$reason" in
@@ -90,7 +94,7 @@ bluetooth_apply() {
         {
             [ -n "$(tail -c1 "$CONFIG_TXT")" ] && echo
             [ "$(grep -E '^\s*\[' "$CONFIG_TXT" | tail -n1 | tr -d ' \r')" = "[all]" ] || echo "[all]"
-            echo "# ping beacon-tuning: bluetooth off, the radio is shared with wifi"
+            echo "# ping performance-update: bluetooth off, the radio is shared with wifi"
             echo "dtoverlay=disable-bt"
         } >> "$CONFIG_TXT"
         sync
@@ -99,7 +103,7 @@ bluetooth_apply() {
 }
 bluetooth_revert() {
     if bt_overlay_set; then
-        sed -i -e '/^# ping beacon-tuning: bluetooth off/d' -e '/^\s*dtoverlay=disable-bt\s*$/d' "$CONFIG_TXT"
+        sed -i -e '/^# ping \(beacon-tuning\|performance-update\): bluetooth off/d' -e '/^\s*dtoverlay=disable-bt\s*$/d' "$CONFIG_TXT"
         sync
     fi
     systemctl enable -q $BT_UNITS 2>/dev/null
@@ -144,7 +148,7 @@ locale_revert() { [ -f "$BACKUP_DIR/locale" ] && cp "$BACKUP_DIR/locale" "$LOCAL
 gov_unit_content() {
     cat <<'EOF'
 [Unit]
-Description=Ping beacon-tuning: cpu governor performance (raspi-config sets ondemand at boot)
+Description=Ping performance-update: cpu governor performance (raspi-config sets ondemand at boot)
 After=raspi-config.service
 
 [Service]
@@ -183,7 +187,7 @@ ITEMS="powersave bluetooth timers locale governor"
 cmd_status() {
     local todo="" i
     for i in $ITEMS; do ${i}_ok || todo="$todo $i"; done
-    local line="BEACON-TUNING"
+    local line="PERFORMANCE-UPDATE"
     if [ -z "$todo" ]; then line="$line OK"; else line="$line TODO$todo"; fi
     bt_reboot_needed && line="$line REBOOT-NEEDED"
     echo "$line v$VERSION"
@@ -197,8 +201,14 @@ cmd_status() {
     return 0
 }
 
+migrate_backups() {  # v1-v2 kept the backups (original config.txt, locale) under the old name
+    [ -d "$OLD_BACKUP_DIR" ] && [ ! -d "$BACKUP_DIR" ] && mv "$OLD_BACKUP_DIR" "$BACKUP_DIR"
+    return 0
+}
+
 cmd_apply() {
     [ "$(id -u)" = "0" ] || { echo "failed not root"; exit 1; }
+    migrate_backups
     local t i changed="" failed=""
     for t in iw systemctl; do command -v $t >/dev/null || { echo "failed missing $t"; exit 1; }; done
     [ -w "$CONFIG_TXT" ] || { echo "failed $CONFIG_TXT not writable"; exit 1; }
@@ -213,8 +223,16 @@ cmd_apply() {
     cmd_status
 }
 
+cmd_apply_missing() {  # only the beacons that still need it: an up-to-date beacon is not touched (no log line either)
+    local i
+    for i in $ITEMS; do ${i}_ok || { cmd_apply; return; }; done
+    echo "skip up to date v$VERSION"
+    cmd_status
+}
+
 cmd_revert() {
     [ "$(id -u)" = "0" ] || { echo "failed not root"; exit 1; }
+    migrate_backups
     local i
     for i in $ITEMS; do ${i}_revert; done
     log "reverted v$VERSION"
@@ -225,6 +243,7 @@ cmd_revert() {
 case "$1" in
     status) cmd_status ;;
     apply) cmd_apply ;;
+    apply-missing) cmd_apply_missing ;;
     revert) cmd_revert ;;
-    *) sed -n '2,19p' "$0"; exit 2 ;;
+    *) sed -n '2,21p' "$0"; exit 2 ;;
 esac

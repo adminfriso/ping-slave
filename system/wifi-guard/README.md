@@ -1,6 +1,6 @@
 # Wi-Fi guard: one radio per beacon
 
-Written 2026-09-30 (Gijs + Claude, on the control PC). **Status: v1 live on the 4 working test beacons (`cde53af8`, `9e4fab63`, `226b5ac4`, `40ab815e`); v2 on `feature/beacon-system`, v3 step 1 done on `05447fc6` (2026-10-04 14:37). v3 (probe back to internal after an outage, 2026-10-04) on `feature/wifi-guard-failback`; both pass the simulation, neither is on a beacon yet. Next: install v3 on one test beacon with both radios (step 1). Decided 2026-10-04 (F): all external radios are unblocked in UniFi before the fleet rollout.**
+Written 2026-09-30 (Gijs + Claude, on the control PC). **Status (2026-10-04): v1 live on the 4 working test beacons (`cde53af8`, `9e4fab63`, `226b5ac4`, `40ab815e`); v3 (probe back to internal after an outage, internal fixed as primary) on `feature/beacon-system`, passes the simulation, runbook steps 3-7 done on `05447fc6`. Next: step 8 (more test beacons). Decided 2026-10-04 (F): the fleet gets the guard with the external radios still blocked, then F unblocks them (steps 14-16).**
 Update the status table at the bottom whenever a step is done: this file is how Gijs and Friso stay in sync.
 
 ## Why
@@ -113,7 +113,7 @@ Who: **G** = Gijs (control PC), **F** = Friso, **C** = Claude. Nothing on the ma
    per-client block, or something else) and whether that is the only change. *Not confirmed yet: nothing in
    this plan assumes it until F says so.*
 2. ~~**G/F** commit this folder on a new ping-slave branch~~ Done 2026-10-04: committed on `feature/beacon-system`
-   (from `main`, only new files plus the README), together with `system/beacon-tuning/`.
+   (from `main`, only new files plus the README), together with `system/beacon-tuning/` (now `system/performance-update/`).
 
 ### 1. One working beacon (test beacon `0000000005447fc6`: both radios, external not associated; `f0b5fdbc` has no external radio)
 
@@ -130,8 +130,8 @@ Who: **G** = Gijs (control PC), **F** = Friso, **C** = Claude. Nothing on the ma
 
 ### 3. The 4 beacons with a broken internal radio
 
-9. Decided 2026-10-04 (F): the external radios are unblocked in UniFi before the fleet rollout (step 14), so
-   these 4 come online then. Before that, only if F unblocks them early for a test.
+9. Decided 2026-10-04 (F): the external radios are unblocked in UniFi only **after** the fleet has the guard (step 15),
+   so these 4 come online then. Before that, only if F unblocks them early for a test.
 10. The 4 appear in `list` (through the external radio). `deploy` the branch, `install live`, `status`: expect
     `active=ext`, internal `off` or not associated, external associated.
 11. `reboot` one of them: it must come back through the external radio within about 1 minute (quick failover,
@@ -140,12 +140,16 @@ Who: **G** = Gijs (control PC), **F** = Friso, **C** = Claude. Nothing on the ma
 ### 4. The whole fleet
 
 13. Merge `feature/beacon-system` into ping-slave `main` (F's call), so a normal `deploy` carries it.
-14. **F** unblocks the external radios in UniFi (decided 2026-10-04). Until a beacon has the guard it is on the
-    network with both radios, so the client count goes up (towards ~500) until 15 is done: do 15 right after.
-15. `deploy all`, then `install live` and `status` **per beacon** in a loop with the token check (see Known risks:
-    not `exec all`). Repeat until every connected beacon says `ok v3` and `WIFI-GUARD OK`. Compare with `list`:
-    beacons that were **not connected** don't have the guard yet. Write their serials in the status table below.
-16. The broken-internal beacons are online through their external radio now: they get the guard in 15 like the rest.
+14. With the external radios **still blocked** in UniFi: `fleet install live confirm` (wifi-guard-test.ps1, or the
+    updater button **Wi-Fi guard ALL**): every connected beacon one by one, about 40 s each, so ~1.5 h for ~140
+    beacons. Nothing changes on the network meanwhile: beacons whose internal radio works switch their (blocked)
+    external off. Then `fleet status` until every connected beacon says `ok v3` and `WIFI-GUARD OK`; write the
+    serials that did not answer in the status table below.
+15. **F** unblocks the external radios in UniFi (decided 2026-10-04: install first, then unblock, so there is no
+    window with ~500 clients). Only beacons without the guard come in with two radios: the broken-internal ones and
+    any that were off or missed in 14.
+16. Right after the unblock: `fleet install live confirm` again. Beacons that have the guard answer `ok v3`; the
+    broken-internal ones (now online through their external radio) and the missed ones get it.
 17. Check in UniFi: client count ≈ number of powered beacons (~250, not ~500). `status` on every beacon (per-beacon loop)
     must show no `TWO-RADIOS-ON-NETWORK`.
 18. Every later build-up: re-run `install live` on all as part of the normal deploy. It's idempotent, so
@@ -180,7 +184,7 @@ Who: **G** = Gijs (control PC), **F** = Friso, **C** = Claude. Nothing on the ma
 - `ping.py` has a `p` (probe) command that puts `wlan0` into monitor mode. On a beacon that runs on `wlan0`, that
   takes it off the network. Don't send `p` (it's also broken: it crashes right after switching).
 - Beacons that are powered off during step 14 come up with both radios once the externals are unblocked, until
-  step 18 reaches them.
+  step 16 reaches them (or the next build-up, step 18).
 - v1 was tested on 4 beacons (status table). v2 changes what counts as "works" (gateway added), v3 adds the probes
   and masks systemd-rfkill; both pass the simulation and still need step 1 on a beacon. The 4 v1 beacons update
   with `install live`.
