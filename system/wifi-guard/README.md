@@ -1,6 +1,6 @@
 # Wi-Fi guard: one radio per beacon
 
-Written 2026-09-30 (Gijs + Claude, on the control PC). **Status: v1 live on the 4 working test beacons (`cde53af8`, `9e4fab63`, `226b5ac4`, `40ab815e`); v2 on `feature/beacon-system`, v3 (probe back to internal after an outage, 2026-10-04) on `feature/wifi-guard-failback`; both pass the simulation, neither is on a beacon yet. Next: install v3 on one test beacon with both radios (step 1). Decided 2026-10-04 (F): all external radios are unblocked in UniFi before the fleet rollout.**
+Written 2026-09-30 (Gijs + Claude, on the control PC). **Status: v1 live on the 4 working test beacons (`cde53af8`, `9e4fab63`, `226b5ac4`, `40ab815e`); v2 on `feature/beacon-system`, v3 step 1 done on `05447fc6` (2026-10-04 14:37). v3 (probe back to internal after an outage, 2026-10-04) on `feature/wifi-guard-failback`; both pass the simulation, neither is on a beacon yet. Next: install v3 on one test beacon with both radios (step 1). Decided 2026-10-04 (F): all external radios are unblocked in UniFi before the fleet rollout.**
 Update the status table at the bottom whenever a step is done: this file is how Gijs and Friso stay in sync.
 
 ## Why
@@ -195,6 +195,10 @@ simulated log. Run it after every change to the script.
 | 2026-10-04 | v3: probes back to internal after an outage, systemd-rfkill masked; simulation 9 scenarios ok (v2 fails `network-down-7min-recovers`) | branch `feature/wifi-guard-failback`, not on a beacon yet | F + C |
 | 2026-10-04 | v3 probe changed: internal on **next to** the external (no offline gap), ICMP-only checks during a probe; ICMP to master and gateway through `wlan0` verified on `05447fc6`, `299acd7f`; simulation 9/9 | not on a beacon yet | F + C |
 
+| 2026-10-04 14:26 | review of #2 on the control PC, merged into `feature/beacon-system` (twice: 9e997d3, then the probe update 4df7b20); simulation 9/9 ok | risk to watch: ARP flux during a probe (both radios on the same /22) can fail a probe although the internal works | G + C |
+| 2026-10-04 14:26-14:33 | `05447fc6` step 4: `install dry` (first v3 build, then reinstalled with 4df7b20) | 7 min: only `dry run: would switch off wlan1` every 15 s; `systemd-rfkill` service + socket masked | G + C |
+| 2026-10-04 14:33 | `05447fc6` steps 5-6: `install live`, again | `changed mode:live`, external switched off, beacon stayed online; then `ok v3` | G + C |
+| 2026-10-04 14:33-14:37 | `05447fc6` step 7: reboot (back after 3 min 18 s), `status` | `WIFI-GUARD OK`, internal on, external off. Boot unit ran before the USB radio existed (`external=none`), the udev hotplug rule switched it off 8 s later. beacon-tuning still `OK v2` | G + C |
 Tested with `wifi-guard-test.ps1` (now in ping-controller `scripts/wifi-guard/`; it was `C:\Shared\Development\ping-wifi-guard\`) (sends the script to the beacon as a
 here-document through the master, no branch needed; steps in `next.txt`, reports in `reports\`). The 4 beacons with a
 broken internal radio were not reachable, so steps 9-11 are still open.
