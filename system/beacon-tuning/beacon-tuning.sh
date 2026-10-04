@@ -7,15 +7,17 @@
 #              (the radio is shared with 2.4 GHz wifi); the overlay needs a reboot
 #   timers     apt-daily, apt-daily-upgrade and man-db timers masked (no apt/man-db runs during a show)
 #   locale     /etc/default/locale rewritten with the quote install.sh missed (LC_CTYPE="en_US.utf8)
+#   governor   cpu governor performance (always 1 GHz) instead of ondemand (700 MHz idle), now and at every boot
+#              (ping-cpu-performance.service, runs after raspi-config's init script that sets ondemand)
 #
 # Usage (as root; the master's exec already runs as root):
 #   beacon-tuning.sh status   read-only: first line BEACON-TUNING OK | TODO <items> [REBOOT-NEEDED], then details
 #   beacon-tuning.sh apply    sets what is not set yet, prints ok v<N> | changed <items> | failed <reason>
-#   beacon-tuning.sh revert   undoes all four (bluetooth comes back after a reboot)
+#   beacon-tuning.sh revert   undoes all five (bluetooth comes back after a reboot)
 #
 # It never reboots. Log: /var/log/ping-beacon-tuning.log.
 
-VERSION=1
+VERSION=2
 
 LOG=/var/log/ping-beacon-tuning.log
 CONFIG_TXT=/boot/config.txt
@@ -24,6 +26,7 @@ LOCALE_FILE=/etc/default/locale
 BACKUP_DIR=/var/lib/ping-beacon-tuning
 TIMERS="apt-daily.timer apt-daily-upgrade.timer man-db.timer"
 BT_UNITS="hciuart.service bluetooth.service"
+GOV_UNIT=/etc/systemd/system/ping-cpu-performance.service
 
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 
@@ -137,7 +140,44 @@ locale_apply() {
 }
 locale_revert() { [ -f "$BACKUP_DIR/locale" ] && cp "$BACKUP_DIR/locale" "$LOCALE_FILE"; }
 
-ITEMS="powersave bluetooth timers locale"
+# ---------- governor ----------
+gov_unit_content() {
+    cat <<'EOF'
+[Unit]
+Description=Ping beacon-tuning: cpu governor performance (raspi-config sets ondemand at boot)
+After=raspi-config.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > $g; done'
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+gov_current() { cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor 2>/dev/null; }
+governor_ok() {
+    [ -f "$GOV_UNIT" ] && gov_unit_content | cmp -s - "$GOV_UNIT" &&
+        systemctl is-enabled -q ping-cpu-performance.service 2>/dev/null && [ "$(gov_current)" = "performance" ]
+}
+governor_apply() {
+    if ! { [ -f "$GOV_UNIT" ] && gov_unit_content | cmp -s - "$GOV_UNIT"; }; then
+        gov_unit_content > "$GOV_UNIT.tmp" && chmod 644 "$GOV_UNIT.tmp" && mv "$GOV_UNIT.tmp" "$GOV_UNIT"
+        systemctl daemon-reload
+        systemctl restart ping-cpu-performance.service 2>/dev/null
+    fi
+    systemctl enable -q ping-cpu-performance.service 2>/dev/null
+    [ "$(gov_current)" = "performance" ] || systemctl restart ping-cpu-performance.service 2>/dev/null
+}
+governor_revert() {
+    local g
+    systemctl disable -q ping-cpu-performance.service 2>/dev/null
+    rm -f "$GOV_UNIT"; systemctl daemon-reload
+    for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo ondemand > "$g"; done
+}
+
+ITEMS="powersave bluetooth timers locale governor"
 
 # ---------- commands ----------
 cmd_status() {
@@ -153,6 +193,7 @@ cmd_status() {
     echo "  bluetooth: overlay=$(bt_overlay_set && echo yes || echo no) hci0=$([ -e /sys/class/bluetooth/hci0 ] && echo present || echo gone)$(for u in $BT_UNITS; do echo -n " ${u%.service}=$(systemctl is-enabled "$u" 2>/dev/null)/$(systemctl is-active "$u" 2>/dev/null)"; done)"
     echo "  timers:$(for t in $TIMERS; do echo -n " ${t%.timer}=$(systemctl is-enabled "$t" 2>/dev/null)"; done)"
     echo "  locale: $(locale_ok && echo fixed || echo "not fixed")"
+    echo "  governor: $(gov_current) $(($(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null || echo 0) / 1000)) MHz unit=$(systemctl is-enabled ping-cpu-performance.service 2>/dev/null || echo none) $(vcgencmd measure_temp 2>/dev/null) $(vcgencmd get_throttled 2>/dev/null)"
     return 0
 }
 
@@ -185,5 +226,5 @@ case "$1" in
     status) cmd_status ;;
     apply) cmd_apply ;;
     revert) cmd_revert ;;
-    *) sed -n '2,17p' "$0"; exit 2 ;;
+    *) sed -n '2,19p' "$0"; exit 2 ;;
 esac
