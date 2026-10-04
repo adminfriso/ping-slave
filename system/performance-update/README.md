@@ -91,3 +91,5 @@ unit comments carry the new name; the backups move from `/var/lib/ping-beacon-tu
 | 2026-10-04 15:05 | `05447fc6`: `apply` after the rename, again | `changed powersave governor` (renamed comments), then `ok v3` | G + C |
 | 2026-10-04 15:07-15:15 | step 2 on 5 beacons (`14f108d3 27c90165 299acd7f b79245d4 c9289c21`): `apply` | `changed powersave bluetooth timers locale governor`, `OK REBOOT-NEEDED v3` | G + C |
 | 2026-10-04 15:23-15:34 | step 2 reboots (see the wifi-guard table) + `status` | all 5 `PERFORMANCE-UPDATE OK v3` (no `REBOOT-NEEDED`), governor performance 1000 MHz, 45-63 °C, `throttled=0x0` | G + C |
+| 2026-10-04 16:00-16:26 | step 3: `fleet performance-update confirm`, 8 at a time | 25 min 25 s, 161: 150 changed + 6 ok, 5 no answer (during F's deploy of 40 beacons 16:22-16:24) | G + C |
+| 2026-10-04 16:30-16:34 | again, **16 at a time** | 3 min 52 s, 164: 157 ok, 7 changed (`165633a3 b42e815e b48c5ab2 f240a491 fa0034df fad0caec fd961f32`), **0 no answer**: all 164 `PERFORMANCE-UPDATE OK v3`; 158 still `REBOOT-NEEDED` (bluetooth overlay; reboot at a quiet moment) | G + C |
