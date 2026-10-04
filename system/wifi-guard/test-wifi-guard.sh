@@ -19,7 +19,7 @@ scenario() {  # $1 name, $2 seconds to simulate, $3 events function, $4 check fu
         rm -rf "$TMP/$1"; mkdir -p "$RUN_DIR" "$STATE_DIR"
         [ -n "$PREV" ] && echo "$PREV" > "$STATE_DIR/last-active"
         ENABLED=1
-        CLOCK=0; END=$2; SWITCHES=0; BOTH_ON=0
+        CLOCK=0; END=$2; SWITCHES=0; BOTH_ON=0; BOTH_FOR=0
         ON_wlan0=1; ON_wlan1=1          # the kernel brings both radios up at boot
         WORKS_wlan0=1; WORKS_wlan1=1     # the radio itself can associate (0 = broken antenna / blocked in UniFi)
         MASTER=1; GATEWAY=1
@@ -40,10 +40,14 @@ scenario() {  # $1 name, $2 seconds to simulate, $3 events function, $4 check fu
         radio_on() {
             [ -n "$1" ] && ! on "$1" || return 0
             eval "ON_$1=1"; SWITCHES=$((SWITCHES + 1)); log "switched on $1"
-            on wlan0 && on wlan1 && BOTH_ON=1
         }
         log() { echo "t=$CLOCK $*" >> "$LOG"; }
         sleep() {
+            # two radios on is allowed only during a probe, for at most PROBE_WINDOW + one check interval
+            if on wlan0 && on wlan1; then
+                BOTH_FOR=$((BOTH_FOR + ${1%.*})); [ "$BOTH_FOR" -gt $((PROBE_WINDOW + INTERVAL)) ] && BOTH_ON=1
+                [ -f "$RUN_DIR/probing" ] || BOTH_ON=1
+            else BOTH_FOR=0; fi
             CLOCK=$((CLOCK + ${1%.*}))
             $EVENTS
             if [ "$CLOCK" -ge "$END" ]; then
@@ -61,7 +65,7 @@ scenario() {  # $1 name, $2 seconds to simulate, $3 events function, $4 check fu
     read -r active switches both int ext < "$TMP/result"
     local verdict
     verdict=$($4 "$active" "$switches" "$int" "$ext")
-    [ "$both" = 1 ] && verdict="FAIL both radios on at once"
+    [ "$both" = 1 ] && verdict="FAIL two radios on outside a probe, or longer than PROBE_WINDOW"
     if [ "${verdict%% *}" = ok ]; then echo "ok    $1: $verdict"; else echo "FAIL  $1: $verdict"; sed 's/^/        /' "$TMP/$1/log"; FAILS=$((FAILS + 1)); fi
     rm -f "$TMP/result"
 }
@@ -89,7 +93,7 @@ internal_broken_ext_blocked() { WORKS_wlan0=0; WORKS_wlan1=0; }
 check_stays_internal() { expect int 1 0 0 "$@"; }
 check_on_external() { expect ext 0 1 1 "$@"; }
 check_back_on_internal() { expect int 1 0 2 "$@"; }
-check_probes_back_off() { expect ext 0 1 7 "$@"; }  # failover + 3 failed probes (300, 600, 1200 s) = 7 switch-ons
+check_probes_back_off() { expect ext 0 1 4 "$@"; }  # failover + 3 failed probes (300, 600, 1200 s), external stays on
 check_one_radio() {  # any radio, but exactly one on
     if [ $(($3 + $4)) -eq 1 ]; then echo "ok (on $1, one radio, $2 switch-ons)"; else echo "FAIL $3 + $4 radios on"; fi
 }
