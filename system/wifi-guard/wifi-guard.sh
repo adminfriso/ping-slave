@@ -6,10 +6,15 @@
 #   - prefers the internal radio; the external one stays switched off (rfkill) while the internal works;
 #   - switches to the external radio when the internal one has not reached the master for FAILOVER_AFTER s
 #     (a swap: the internal is switched off first, then the external on; never both);
-#   - on the external radio: tries the internal again only when the external fails for FAILBACK_AFTER s,
-#     or at the next boot (every boot starts with the external off and the internal first);
+#   - on the external radio: tries the internal again when the external fails for FAILBACK_AFTER s, at the
+#     next boot (every boot starts with the external off and the internal first), and (v3) every PROBE_EVERY s
+#     while the external works if the internal worked earlier this boot: after a network outage (build-up,
+#     partial power cut) a beacon returns to its internal radio by itself. A failed probe goes back to the
+#     external after PROBE_WINDOW s and doubles the wait (up to PROBE_MAX);
 #   - "works" = associated, an IPv4 address, and the master or the gateway answers (v2: a master restart
 #     made every beacon swap radios in v1);
+#   - owns the rfkill state: systemd-rfkill is masked on install (v3), it restored a radio state saved at
+#     shutdown after the boot unit had run;
 #   - finds the radios by driver, not by name (wlan0/wlan1 can swap between boots).
 #
 # Usage (as root):
@@ -24,7 +29,7 @@
 # Settings: /etc/default/ping-wifi-guard (made on install when missing, never overwritten).
 # Log: /var/log/ping-wifi-guard.log. Docs: README.md next to this file.
 
-VERSION=2
+VERSION=3
 
 SELF=/usr/local/sbin/ping-wifi-guard
 CONF=/etc/default/ping-wifi-guard
@@ -44,6 +49,9 @@ BOOT_GRACE=60        # s after boot or a switch before a radio counts as failing
 FAILOVER_AFTER=120   # s internal failing before switching to the external radio
 QUICK_FAILOVER=30    # same, when the previous boot ended on the external radio (broken internal)
 FAILBACK_AFTER=600   # s external failing before trying the internal radio again
+PROBE_EVERY=300      # s on a working external before trying the internal again (only if it worked this boot); 0 = never
+PROBE_WINDOW=90      # s a probed internal gets to work before going back to the external
+PROBE_MAX=3600       # s, the wait doubles after every failed probe up to this
 MIN_SIGNAL=0         # dBm, e.g. -85: internal weaker than this counts as failing; 0 = off
 JITTER=30            # s, random extra wait before a switch so beacons do not all switch at once
 ENABLED=1            # 0 = dry run: decide and log, never switch a radio
@@ -185,7 +193,7 @@ cmd_hotplug() {  # udev: a wlan interface appeared (the USB radio can appear aft
 
 cmd_run() {
     mkdir -p "$RUN_DIR" "$STATE_DIR"
-    local bad_since=0 since_switch now jit a failover
+    local bad_since=0 since_switch now jit a failover probing=0 probe_every=$PROBE_EVERY
     since_switch=$(uptime_s)
     [ "$(uptime_s)" -lt "$BOOT_GRACE" ] && since_switch=0
     log "guard v$VERSION started (enabled=$ENABLED)"
@@ -207,7 +215,19 @@ cmd_run() {
             radio_off "$EXT"; radio_on "$INT"
             failover=$FAILOVER_AFTER
             [ "$(cat "$RUN_DIR/previous-boot" 2>/dev/null)" = "ext" ] && failover=$QUICK_FAILOVER
-            if healthy "$INT"; then bad_since=0
+            if healthy "$INT"; then
+                bad_since=0
+                [ -f "$RUN_DIR/int-worked" ] || touch "$RUN_DIR/int-worked"
+                if [ "$probing" = 1 ]; then
+                    probing=0; probe_every=$PROBE_EVERY
+                    log "probe: internal $INT works again, staying on internal"
+                fi
+            elif [ "$probing" = 1 ]; then  # a probe gets PROBE_WINDOW s, no jitter, then back to the external
+                if [ $((now - since_switch)) -ge "$PROBE_WINDOW" ]; then
+                    probe_every=$((probe_every * 2)); [ "$probe_every" -gt "$PROBE_MAX" ] && probe_every=$PROBE_MAX
+                    log "probe: internal $INT still failing after $PROBE_WINDOW s, back to external $EXT (next probe in $probe_every s)"
+                    use_external; probing=0; since_switch=$(uptime_s)
+                fi
             elif [ $((now - since_switch)) -ge "$BOOT_GRACE" ]; then
                 [ "$bad_since" -eq 0 ] && { bad_since=$now; log "internal $INT failing: $(describe "$INT")"; }
                 if [ $((now - bad_since)) -ge "$failover" ]; then
@@ -220,7 +240,15 @@ cmd_run() {
             fi
         else
             radio_off "$INT"; radio_on "$EXT"
-            if healthy "$EXT"; then bad_since=0
+            if healthy "$EXT"; then
+                bad_since=0
+                # the internal worked earlier this boot, so the swap was probably a network outage: try it again
+                # (a radio can only be tested by switching to it; one that never worked this boot is not probed)
+                if [ "$PROBE_EVERY" != "0" ] && [ -f "$RUN_DIR/int-worked" ] &&
+                    [ $((now - since_switch)) -ge "$probe_every" ]; then
+                    log "probe: external $EXT works, try internal $INT again"
+                    use_internal; probing=1; since_switch=$(uptime_s)
+                fi
             elif [ $((now - since_switch)) -ge "$BOOT_GRACE" ]; then
                 [ "$bad_since" -eq 0 ] && { bad_since=$now; log "external $EXT failing: $(describe "$EXT")"; }
                 if [ $((now - bad_since)) -ge "$FAILBACK_AFTER" ]; then
@@ -294,6 +322,11 @@ EOF
 ACTION=="add", SUBSYSTEM=="net", KERNEL=="wlan*", RUN+="$SELF hotplug %k"
 EOF
     [ -n "$UNITS" ] && systemctl daemon-reload
+    # systemd-rfkill restores the rfkill state saved at shutdown, after our boot unit (seen on cde53af8, 2026-10-04):
+    # a beacon shut down on its external radio would boot with the internal blocked. The guard sets rfkill itself.
+    for u in systemd-rfkill.service systemd-rfkill.socket; do
+        [ "$(systemctl is-enabled "$u" 2>/dev/null)" = "masked" ] || { systemctl mask -q "$u" 2>/dev/null; CHANGED="$CHANGED mask:$u"; }
+    done
     for u in ping-wifi-guard-boot.service ping-wifi-guard.service; do
         systemctl is-enabled -q "$u" 2>/dev/null || { systemctl enable -q "$u" 2>/dev/null; CHANGED="$CHANGED enable:$u"; }
     done
@@ -310,6 +343,7 @@ cmd_uninstall() {
     [ "$(id -u)" = "0" ] || { echo "failed not root"; exit 1; }
     systemctl disable --now -q ping-wifi-guard.service ping-wifi-guard-boot.service 2>/dev/null
     rm -f "$UNIT_LOOP" "$UNIT_BOOT" "$UDEV_RULE" "$SELF"
+    systemctl unmask -q systemd-rfkill.service systemd-rfkill.socket 2>/dev/null
     systemctl daemon-reload; udevadm control --reload >/dev/null 2>&1
     ENABLED=1; find_radios; radio_on "$INT"; radio_on "$EXT"
     rm -rf "$RUN_DIR"
