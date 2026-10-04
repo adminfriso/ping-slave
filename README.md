@@ -135,5 +135,5 @@ that was decided or measured. Nothing lives only in a chat, a terminal or someon
 
 - [`system/wifi-guard/`](system/wifi-guard/README.md): keeps at most one wifi radio of a beacon on the
   network (internal first, external as fallback). Being tested on the test beacons, see its status table.
-- [`system/beacon-tuning/`](system/beacon-tuning/README.md): system settings for every beacon (wifi power saving
+- [`system/performance-update/`](system/performance-update/README.md) (was `beacon-tuning`): system settings for every beacon (wifi power saving
   off, bluetooth off, no apt/man-db timers, locale typo from `install.sh` fixed, cpu governor performance). Idempotent, see its status table.

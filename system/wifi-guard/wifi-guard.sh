@@ -103,8 +103,10 @@ radio_off() {
     is_blocked "$1" && return 0
     if [ "$ENABLED" != "1" ]; then dry_log "dry run: would switch off $1 ($(driver_of "$1"))"; return 0; fi
     local r; r=$(rfkill_path "$1")
-    if [ -n "$r" ]; then echo 1 > "$r/soft"; else
-        wpa_cli -i "$1" disconnect >/dev/null 2>&1; ip link set "$1" down; fi
+    if [ -n "$r" ]; then echo 1 > "$r/soft" 2>/dev/null; else
+        wpa_cli -i "$1" disconnect >/dev/null 2>&1; ip link set "$1" down 2>/dev/null; fi
+    # verify: a radio that did not go off must not be followed by switching the other one on (two radios)
+    if ! is_blocked "$1"; then log "FAILED to switch off $1 ($(driver_of "$1") $(mac_of "$1"))"; return 1; fi
     log "switched off $1 ($(driver_of "$1") $(mac_of "$1"))"
 }
 radio_on() {
@@ -157,8 +159,10 @@ active_set() {  # RUN_DIR is per boot (tmpfs); STATE_DIR/last-active survives a 
 }
 
 # ---------- switching (order matters: off first, then on, two radios on only during a probe) ----------
-use_internal() { radio_off "$EXT"; radio_on "$INT"; active_set int; }
-use_external() { radio_off "$INT"; radio_on "$EXT"; active_set ext; }
+# a swap only switches the other radio on when the first one is really off; otherwise it stays as it is and the
+# loop tries again at the next check
+use_internal() { radio_off "$EXT" || return 1; radio_on "$INT"; active_set int; }
+use_external() { radio_off "$INT" || return 1; radio_on "$EXT"; active_set ext; }
 
 # ---------- commands ----------
 cmd_status() {
@@ -216,7 +220,9 @@ cmd_run() {
             else a=ext; fi
             active_set "$a"; log "start on $a"
         fi
-        if [ -z "$EXT" ]; then radio_on "$INT"; sleep "$INTERVAL"; continue; fi
+        # no external radio (unplugged while active?): the internal is the active one, so a re-plugged adapter is
+        # switched off by the hotplug instead of on next to the internal
+        if [ -z "$EXT" ]; then radio_on "$INT"; active_set int; sleep "$INTERVAL"; continue; fi
         if [ -z "$INT" ]; then radio_on "$EXT"; active_set ext; sleep "$INTERVAL"; continue; fi
 
         if [ "$a" = "int" ]; then
@@ -337,8 +343,13 @@ EOF
     [ -n "$UNITS" ] && systemctl daemon-reload
     # systemd-rfkill restores the rfkill state saved at shutdown, after our boot unit (seen on cde53af8, 2026-10-04):
     # a beacon shut down on its external radio would boot with the internal blocked. The guard sets rfkill itself.
+    # Only in live mode: a dry run switches nothing, so after a reboot the saved state must still be restored.
     for u in systemd-rfkill.service systemd-rfkill.socket; do
-        [ "$(systemctl is-enabled "$u" 2>/dev/null)" = "masked" ] || { systemctl mask -q "$u" 2>/dev/null; CHANGED="$CHANGED mask:$u"; }
+        if [ "$ENABLED" = "1" ]; then
+            [ "$(systemctl is-enabled "$u" 2>/dev/null)" = "masked" ] || { systemctl mask -q "$u" 2>/dev/null; CHANGED="$CHANGED mask:$u"; }
+        else
+            [ "$(systemctl is-enabled "$u" 2>/dev/null)" = "masked" ] && { systemctl unmask -q "$u" 2>/dev/null; CHANGED="$CHANGED unmask:$u"; }
+        fi
     done
     for u in ping-wifi-guard-boot.service ping-wifi-guard.service; do
         systemctl is-enabled -q "$u" 2>/dev/null || { systemctl enable -q "$u" 2>/dev/null; CHANGED="$CHANGED enable:$u"; }
