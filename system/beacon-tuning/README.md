@@ -1,7 +1,7 @@
 # Beacon tuning: system settings for every beacon
 
 Written 2026-10-04 (Gijs + Claude, on the control PC). **Status: v1 applied and rebooted on 1 beacon (`05447fc6`): OK.
-v2 (governor) applied there, not rebooted yet. Next: reboot it, `status` must show `governor: performance`, then the rollout.**
+v2 (governor) applied there and survives a reboot. Next: step 2 of the rollout (five beacons).**
 Update the status table at the bottom whenever a step is done.
 
 ## Why
@@ -71,4 +71,4 @@ in ping-controller sends the script from the ping-slave clone and runs it (nothi
 | 2026-10-04 12:40 | `05447fc6`: `status`, `apply`, `apply` again | `changed powersave bluetooth timers locale`, then `ok v1`; `wlan0=off`, `hci0=gone`, beacon stayed online | G + C |
 | 2026-10-04 13:55 | `05447fc6`: reboot (by Gijs) + `status` | `BEACON-TUNING OK v1`: power saving off at boot by the hook, `hci0=gone`, `ping.py` running | G + C |
 | 2026-10-04 13:57 | v2 (governor) on `05447fc6`: `apply`, `apply` again | `changed powersave governor` (the hook carries the version), then `ok v2`; 10 samples over 10 s: arm 1000 MHz, core 400 MHz, 56-57 °C, `throttled=0x0`; light + sound sent | G + C |
-| | `05447fc6`: reboot + `status` (v2 governor at boot) | open | |
+| 2026-10-04 14:23 | `05447fc6`: reboot (14:19:59, back 14:23:18), read at 14:23:54 (up 2 min) | `scaling_governor=performance`: survives the reboot (the unit runs after raspi-config) | G + F |
