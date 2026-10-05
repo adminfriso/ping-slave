@@ -93,3 +93,7 @@ unit comments carry the new name; the backups move from `/var/lib/ping-beacon-tu
 | 2026-10-04 15:23-15:34 | step 2 reboots (see the wifi-guard table) + `status` | all 5 `PERFORMANCE-UPDATE OK v3` (no `REBOOT-NEEDED`), governor performance 1000 MHz, 45-63 °C, `throttled=0x0` | G + C |
 | 2026-10-04 16:00-16:26 | step 3: `fleet performance-update confirm`, 8 at a time | 25 min 25 s, 161: 150 changed + 6 ok, 5 no answer (during F's deploy of 40 beacons 16:22-16:24) | G + C |
 | 2026-10-04 16:30-16:34 | again, **16 at a time** | 3 min 52 s, 164: 157 ok, 7 changed (`165633a3 b42e815e b48c5ab2 f240a491 fa0034df fad0caec fd961f32`), **0 no answer**: all 164 `PERFORMANCE-UPDATE OK v3`; 158 still `REBOOT-NEEDED` (bluetooth overlay; reboot at a quiet moment) | G + C |
+| 2026-10-05 11:24 | fleet `performance-status`, **32 at a time** | 171 answered: 161 `OK v3`, 10 `TODO powersave bluetooth timers locale governor` (old SD cards, connected after the 10-04 runs) | C |
+| 2026-10-05 11:29-11:51 | catch-up on those 10 (`d0223887` first): deploy `main`, `apply` | all `changed powersave bluetooth timers locale governor`, `OK REBOOT-NEEDED v3` | C |
+| 2026-10-05 11:52-11:56 | reboot of only those 10, one batch | 10/10 back in 3.5 min | C |
+| 2026-10-05 11:55 | fleet `performance-status`, 32 at a time | **171/171 `PERFORMANCE-UPDATE OK v3`, no `REBOOT-NEEDED`**, 0 no answer; versions: 170 on `f9984bf`, test beacon `05447fc6` on `dev` `8eac13e` (PR #5 test) | C |

@@ -242,6 +242,10 @@ simulated log. Run it after every change to the script.
 | 2026-10-04 ~16:20 | F unblocks the external radios in UniFi; F deploys 40 beacons still on 0ae011f (16:22-16:24) | - | F |
 | 2026-10-04 16:26-16:30 | step 16: `fleet install live confirm` again, 8 at a time | 3 min 22 s, 165: 160 ok, 3 changed (`165633a3 9e37fba1 b42e815e`), `f240a491` changed (status read 4 s before its first switch; external off at 16:29:59, -78 dBm), 1 no answer (`d6ebbe3d`, now disconnected) | G + C |
 | 2026-10-04 16:35 | step 17: fleet `status`, 16 at a time | 49 s, 164 connected of 206: **all 164 `WIFI-GUARD OK v3`, all `active=int`, 0 on external, 0 two radios**. Open: `d6ebbe3d` disconnected (weak internal); no broken-internal beacon has come online through its external radio yet; UniFi client count to check (F) | G + C |
+| 2026-10-05 11:21 | fleet `status`, **32 at a time** (new default) | 171 answered: 151 v3, 10 v3 (no external radio seen), **10 not installed with both radios on the network** (old SD cards, connected after the 10-04 runs: `03051ac9 297eb800 39944319 525b4c72 59b72bc2 665ca9bc 6c4103d8 97a4156f d0223887 dedd1bd2`); `ef1239d1`, `f240a491` on external (-85 dBm) | C |
+| 2026-10-05 11:30-11:51 | catch-up: those 10 deployed to `main` `f9984bf`, `install live` (`d0223887` first, then the 9) | all `changed ... mode:live`, `WIFI-GUARD OK v3 active=int`, external off, -46 to -64 dBm | C |
+| 2026-10-05 11:52-11:56 | reboot of only those 10 (bluetooth overlay), one batch | 10/10 back in 3.5 min | C |
+| 2026-10-05 11:58 | fleet `status`, 32 at a time | **171/171 `WIFI-GUARD OK v3`** (161 + 10 without an external radio), 0 two radios, 0 no answer; on external: `ef1239d1`, `f240a491` (both -85 dBm; placement Wednesday) | C |
 Tested with `wifi-guard-test.ps1` (now in ping-controller `scripts/wifi-guard/`; it was `C:\Shared\Development\ping-wifi-guard\`) (sends the script to the beacon as a
 here-document through the master, no branch needed; steps in `next.txt`, reports in `reports\`). The 4 beacons with a
 broken internal radio were not reachable, so steps 9-11 are still open.
