@@ -76,6 +76,8 @@ fps = 25.0
 whiteleds = False
 whitepulse = True
 status = True
+# set by SetStatusLeds (scheduler thread), flushed by LightSlave: only LightSlave calls strip.show()
+statusDirty = False
 fadeout = True
 fadein = False
 repeat = False
@@ -133,9 +135,10 @@ def SetStatusLeds():
     strip.setPixelColor(13, paars)
     #strip.setPixelColor(14, led1)
     #strip.setPixelColor(15, led0)
-    # the status leds need their own show(): SoundSlave no longer calls strip.show() 100x/s, which used to make
-    # these pixels visible as a side effect (once per second, only while status is on)
-    strip.show()
+    # the strip is flushed by LightSlave (the only thread that calls strip.show()), also when no image plays:
+    # SoundSlave no longer calls strip.show() 100x/s, which used to make these pixels visible as a side effect
+    global statusDirty
+    statusDirty = True
 
 def imgMerge(orImg, newImg, frame):
     widthNewImg, heigthNewImg = newImg.size
@@ -213,6 +216,7 @@ class LightSlave(threading.Thread):
         self.command = None
 
     def run(self):
+        global statusDirty
         starttijd = 0
         Beeld = None
         frame = 0
@@ -257,6 +261,11 @@ class LightSlave(threading.Thread):
                 else:
                     time.sleep(0.001)
             else:
+                # no image: flush the status leds here (SetStatusLeds only marks them), so idle beacons show
+                # their status without a second thread calling strip.show()
+                if statusDirty:
+                    statusDirty = False
+                    strip.show()
                 time.sleep(0.001)
 
 
