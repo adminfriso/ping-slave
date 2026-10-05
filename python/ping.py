@@ -133,6 +133,9 @@ def SetStatusLeds():
     strip.setPixelColor(13, paars)
     #strip.setPixelColor(14, led1)
     #strip.setPixelColor(15, led0)
+    # the status leds need their own show(): SoundSlave no longer calls strip.show() 100x/s, which used to make
+    # these pixels visible as a side effect (once per second, only while status is on)
+    strip.show()
 
 def imgMerge(orImg, newImg, frame):
     widthNewImg, heigthNewImg = newImg.size
