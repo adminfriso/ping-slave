@@ -76,8 +76,6 @@ fps = 25.0
 whiteleds = False
 whitepulse = True
 status = True
-# set by SetStatusLeds (scheduler thread), flushed by LightSlave: only LightSlave calls strip.show()
-statusDirty = False
 fadeout = True
 fadein = False
 repeat = False
@@ -135,10 +133,6 @@ def SetStatusLeds():
     strip.setPixelColor(13, paars)
     #strip.setPixelColor(14, led1)
     #strip.setPixelColor(15, led0)
-    # the strip is flushed by LightSlave (the only thread that calls strip.show()), also when no image plays:
-    # SoundSlave no longer calls strip.show() 100x/s, which used to make these pixels visible as a side effect
-    global statusDirty
-    statusDirty = True
 
 def imgMerge(orImg, newImg, frame):
     widthNewImg, heigthNewImg = newImg.size
@@ -163,14 +157,9 @@ def Blackleds():
     strip.show()
 
 def showLeds(im, frame):
-    # snelle pixel-toegang: 1x im.load() ipv een getpixel()-aanroep per pixel
-    # (getpixel() bouwt intern telkens opnieuw een accessor op; bij 200 pixels x 25fps
-    # is dat ~5000 onnodige allocaties per seconde - een van de zwaarste kostenposten
-    # in deze functie op een Pi Zero)
-    px = im.load()
     # witte leds
     if whiteleds is True:
-        r, g, b = px[frame, 0]
+        r, g, b = im.getpixel((frame, 0))
         r = gamma8[r]
         L = r * 0.39
         led.value = L / 255.0 # value is 0..1
@@ -179,26 +168,21 @@ def showLeds(im, frame):
     # print(widthorim)
     lastPart = (3.0 / 4.0) * float(widthorim)
     firstPart = (1.0 / 4.0) * float(widthorim)
-    # ratio hangt alleen af van 'frame', niet van y - dus 1x berekenen i.p.v.
-    # 200x (1x per pixel) per frame opnieuw
-    fadeInRatio = None
-    if fadein is True and frame < firstPart:
-        fadeInRatio = float(frame) / float(firstPart)
-    fadeOutRatio = None
-    if fadeout is True and frame > lastPart:
-        fadeOutRatio = float(widthorim - frame) / float(widthorim - lastPart)
     for y in range(0, heigthorim):
-        r, g, b = px[frame, y]
+        r, g, b = im.getpixel((frame, y))
         # fadeIN
-        if fadeInRatio is not None:
-            r = fadeInRatio * float(r)
-            g = fadeInRatio * float(g)
-            b = fadeInRatio * float(b)
+        if fadein is True and frame < firstPart:
+            ratio = float(frame) / float(firstPart)
+            r = ratio * float(r)
+            g = ratio * float(g)
+            b = ratio * float(b)
         # fadeOUT
-        if fadeOutRatio is not None:
-            r = Xr * fadeOutRatio * float(r)
-            g = Xg * fadeOutRatio * float(g)
-            b = Xb * fadeOutRatio * float(b)
+        if fadeout is True and frame > lastPart:
+            ratio = float(widthorim - frame) / float(widthorim - lastPart)
+            # print(ratio)
+            r = Xr * ratio * float(r)
+            g = Xg * ratio * float(g)
+            b = Xb* ratio * float(b)
         r = gamma8[int(r)]
         g = gamma8[int(g)]
         b = gamma8[int(b)]
@@ -209,14 +193,11 @@ def showLeds(im, frame):
 
 
 class LightSlave(threading.Thread):
-    def __init__(self):
-        # was eerder per ongeluk 'def init' i.p.v. '__init__', waardoor deze
-        # nooit werd aangeroepen en self.command nooit expliciet werd gezet
-        threading.Thread.__init__(self)
+    def init(self):
+        threading.Thread.init(self)
         self.command = None
 
     def run(self):
-        global statusDirty
         starttijd = 0
         Beeld = None
         frame = 0
@@ -261,11 +242,6 @@ class LightSlave(threading.Thread):
                 else:
                     time.sleep(0.001)
             else:
-                # no image: flush the status leds here (SetStatusLeds only marks them), so idle beacons show
-                # their status without a second thread calling strip.show()
-                if statusDirty:
-                    statusDirty = False
-                    strip.show()
                 time.sleep(0.001)
 
 
@@ -288,13 +264,7 @@ class SoundSlave(threading.Thread):
                     led.blink(0, 0, 0.1, 0.3, 1,
                               True)  # ontime, offtime, fadeintime, fade out time, n-times, in background
             else:
-                # LET OP: hier stond eerder ook strip.show(). Dat hoort bij het lichtbeeld,
-                # niet bij geluid, en zorgde ervoor dat de strip ~100x/sec (elke 10ms) werd
-                # ge-update, los van en gelijktijdig met LightSlave's eigen strip.show().
-                # Dat is pure overhead (SPI/DMA-transfer van 200 LEDs, ~100x per seconde,
-                # zonder dat er iets veranderde) en een race op hetzelfde strip-object
-                # vanuit twee threads tegelijk. Verwijderd: SoundSlave heeft niets met de
-                # LED-strip te maken.
+                strip.show()
                 time.sleep(0.01)
 
 
@@ -365,21 +335,16 @@ class ProbeSlave(threading.Thread):
         self.command = None
 
     def run(self):
-        # was eerder: 'time' i.p.v. 'self.time' (self.time is de duur die is
-        # meegegeven aan de constructor; 'time' zonder self. is hier de
-        # geimporteerde time-module, dus int(time)/"..."+ time crashte altijd
-        # met een TypeError). Ook 'time.time' miste de aanroep-haakjes en str().
         os.system('sudo ifconfig wlan0 promisc')
         os.system('sudo ifconfig wlan0 down')
         os.system('sudo iwconfig wlan0 mode monitor')
         os.system('sudo ifconfig wlan0 up')
-        timestamp = str(time.time())
-        if int(self.time) > 0:
+        if int(time) > 0:
             os.system(
-                "sudo timeout " + str(self.time) + " tcpdump -C 10 -i wlan0 -w /home/pi/probedump" + timestamp + ".pcap -tttt -e -s 256 type mgt subtype probe-req")
+                "sudo timeout " + time + " tcpdump -C 10 -i wlan0 -w /home/pi/probedump" + time.time + ".pcap -tttt -e -s 256 type mgt subtype probe-req")
         else:
             os.system(
-                "tcpdump -C 10 -i wlan0 -w /home/pi/probedump" + timestamp + ".pcap -tttt -e -s 256 type mgt subtype probe-req")
+                "tcpdump -C 10 -i wlan0 -w /home/pi/probedump" + time.time + ".pcap -tttt -e -s 256 type mgt subtype probe-req")
 
 
 c = LightSlave()
@@ -445,13 +410,7 @@ if __name__ == '__main__':
                     status = False
                 elif com == "e,statuson":
                     status = True
-                    # was eerder: hier nog een keer scheduler.enter(...).
-                    # SetStatus() plant zichzelf altijd al elke seconde opnieuw
-                    # (zie regel 126), ook als status False is - het 'if status'
-                    # bepaalt alleen of er getekend wordt. Deze extra regel
-                    # startte dus telkens een NIEUWE, parallelle tik-keten die
-                    # nooit meer stopt: na elke statusoff->statuson toggle kwam
-                    # er een extra SetStatus-lus per seconde bij.
+                    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
                 elif com == "e,fadeouton":
                     fadeout = True
                 elif com == "e,fadeoutoff":
