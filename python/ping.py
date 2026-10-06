@@ -79,6 +79,8 @@ whitepulse = True
 status = True
 # set by SetStatusLeds (scheduler thread), flushed by LightSlave: only LightSlave calls strip.show()
 statusDirty = False
+# LightSlave sends the strip again this often (ms) while no image plays, so a corrupted transfer does not stay lit
+IDLE_REFRESH_MS = 10
 fadeout = True
 fadein = False
 repeat = False
@@ -305,6 +307,7 @@ class LightSlave(threading.Thread):
 
     def run(self):
         global statusDirty
+        lastIdleShow = 0
         starttijd = 0
         Beeld = None
         frame = 0
@@ -347,10 +350,14 @@ class LightSlave(threading.Thread):
                 else:
                     time.sleep(0.001)
             else:
-                # no image: flush the status leds here (SetStatusLeds only marks them), so idle beacons show
-                # their status without a second thread calling strip.show()
-                if statusDirty:
+                # no image: send the strip again every IDLE_REFRESH_MS, also when nothing changed. A corrupted
+                # transfer (seen 2026-10-06: random colours per beacon while idle with status on, when the strip was
+                # only sent once per second) is then overwritten within 10 ms, as the old SoundSlave refresh at
+                # 100x/s did. This also flushes the status leds (SetStatusLeds only marks them).
+                now = time.time() * 1000
+                if statusDirty or now - lastIdleShow >= IDLE_REFRESH_MS:
                     statusDirty = False
+                    lastIdleShow = now
                     strip.show()
                 time.sleep(0.001)
 
