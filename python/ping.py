@@ -82,7 +82,7 @@ statusDirty = False
 # True while SetStatusLeds has set pixels 5 and 13 and nothing cleared them yet
 statusLit = False
 # LightSlave sends the strip again this often (ms) while no image plays, so a corrupted transfer does not stay lit
-IDLE_REFRESH_MS = 50
+IDLE_REFRESH_MS = 10
 fadeout = True
 fadein = False
 repeat = False
