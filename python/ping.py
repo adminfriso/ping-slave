@@ -20,6 +20,7 @@ import Queue
 import time
 import sched
 import os
+import collections
 
 from gpiozero import PWMLED
 from gpiozero import LoadAverage, PingServer
@@ -89,9 +90,87 @@ timeRatio = 0.68
 #led1 = Color(0, 0, 0)
 #led2 = Color(255, 0, 255)  # version led#3
 paars = Color(255, 0, 255)
+# showLeds builds colours inline when Color() has the usual (red << 16) | (green << 8) | blue layout
+COLOR_INLINE = (Color(1, 2, 3) == ((1 << 16) | (2 << 8) | 3))
 Xr = 1
 Xg = 1
 Xb = 1
+
+# ---------- caches and timing helpers (optimization pass 2026-10-05) ----------
+# Loading a WAV (mixer.Sound) or opening + LANCZOS-resizing an image on every command costs CPU and, worse, delay
+# at the moment the sound or light has to start. Both are kept in memory (LRU, by path and file modification time),
+# so a repeated sample or image starts right away and the SD card is read less.
+SOUND_CACHE_BYTES = 48 * 1024 * 1024   # ~ WAV file sizes; the beacon has ~290 MB free
+IMAGE_CACHE_PIXELS = 8 * 1000 * 1000   # resized RGB images, ~24 MB
+soundCache = collections.OrderedDict()  # path -> (mtime, Sound, bytes); used by SoundSlave only
+soundCacheBytes = [0]
+imageCache = collections.OrderedDict()  # (path, width) -> (mtime, Image, pixels); used by LightSlave only
+imageCachePixels = [0]
+
+
+def cachedSound(path):
+    mtime = os.path.getmtime(path)
+    hit = soundCache.pop(path, None)
+    if hit is not None:
+        if hit[0] == mtime:
+            soundCache[path] = hit  # most recently used
+            return hit[1]
+        soundCacheBytes[0] -= hit[2]
+    sound = mixer.Sound(path)
+    size = os.path.getsize(path)
+    soundCache[path] = (mtime, sound, size)
+    soundCacheBytes[0] += size
+    while soundCacheBytes[0] > SOUND_CACHE_BYTES and len(soundCache) > 1:
+        old = soundCache.popitem(last=False)[1]
+        soundCacheBytes[0] -= old[2]
+    return sound
+
+
+def cachedImage(path, width):
+    # cached images are only read (showLeds) or copied (imgMerge pastes them into new images), never changed
+    mtime = os.path.getmtime(path)
+    key = (path, width)
+    hit = imageCache.pop(key, None)
+    if hit is not None:
+        if hit[0] == mtime:
+            imageCache[key] = hit
+            return hit[1]
+        imageCachePixels[0] -= hit[2]
+    im = Image.open(path)
+    im = im.convert("RGB")
+    im = im.resize((width, 200), 5)  # PI2.Image.LANCZOS
+    imageCache[key] = (mtime, im, width * 200)
+    imageCachePixels[0] += width * 200
+    while imageCachePixels[0] > IMAGE_CACHE_PIXELS and len(imageCache) > 1:
+        old = imageCache.popitem(last=False)[1]
+        imageCachePixels[0] -= old[2]
+    return im
+
+
+def playSound(sound, volume):
+    # the volume goes on the channel, not on the (shared, cached) Sound: Sound.set_volume would also change copies of
+    # the same sample that are still playing. Set before play, so nothing plays at full volume for a moment.
+    channel = mixer.find_channel()
+    if channel is None:  # all 50 channels busy: skip it, as Sound.play did
+        return None
+    channel.set_volume(volume)
+    channel.play(sound)
+    return channel
+
+
+def waitUntil(tijd):
+    # tijd in epoch milliseconds. Was a 1 ms poll for the whole wait: a scene that schedules commands seconds ahead
+    # had every waiting thread wake up 1000x/s. Now one sleep until 20 ms before, then 1 ms polls as before (same
+    # precision). Sleeps are at most 0.5 s, so an NTP time step during a long wait is still followed.
+    while True:
+        remaining = tijd / 1000.0 - time.time()
+        if remaining <= 0:
+            return
+        if remaining > 0.02:
+            time.sleep(min(remaining - 0.02, 0.5))
+        else:
+            time.sleep(0.001)
+
 
 # thread safe
 lightQueue = Queue.Queue()
@@ -187,22 +266,31 @@ def showLeds(im, frame):
     fadeOutRatio = None
     if fadeout is True and frame > lastPart:
         fadeOutRatio = float(widthorim - frame) / float(widthorim - lastPart)
-    for y in range(0, heigthorim):
-        r, g, b = px[frame, y]
-        # fadeIN
+    # one lookup table per channel and frame (fade and gamma in one), instead of float maths per pixel: without a fade
+    # (the middle half of an image) that is gamma8 itself
+    if fadeInRatio is None and fadeOutRatio is None:
+        lutR = lutG = lutB = gamma8
+    else:
+        fr = fg = fb = 1.0
         if fadeInRatio is not None:
-            r = fadeInRatio * float(r)
-            g = fadeInRatio * float(g)
-            b = fadeInRatio * float(b)
-        # fadeOUT
+            fr = fg = fb = fadeInRatio
         if fadeOutRatio is not None:
-            r = Xr * fadeOutRatio * float(r)
-            g = Xg * fadeOutRatio * float(g)
-            b = Xb * fadeOutRatio * float(b)
-        r = gamma8[int(r)]
-        g = gamma8[int(g)]
-        b = gamma8[int(b)]
-        strip.setPixelColor(y, Color(b, g, r))
+            fr = fr * Xr * fadeOutRatio
+            fg = fg * Xg * fadeOutRatio
+            fb = fb * Xb * fadeOutRatio
+        lutR = [gamma8[int(fr * v)] for v in range(256)]
+        lutG = [gamma8[int(fg * v)] for v in range(256)]
+        lutB = [gamma8[int(fb * v)] for v in range(256)]
+    setPixel = strip.setPixelColor
+    if COLOR_INLINE:
+        # Color(b, g, r) built inline (no function call per pixel); COLOR_INLINE checks the layout at startup
+        for y in xrange(heigthorim):
+            r, g, b = px[frame, y]
+            setPixel(y, (lutB[b] << 16) | (lutG[g] << 8) | lutR[r])
+    else:
+        for y in xrange(heigthorim):
+            r, g, b = px[frame, y]
+            setPixel(y, Color(lutB[b], lutG[g], lutR[r]))
     if status:
         SetStatusLeds()
     strip.show()
@@ -228,9 +316,7 @@ class LightSlave(threading.Thread):
                 imgFile = comWords[1]
                 duration = float(comWords[2])
                 try:
-                    im = Image.open(imgFile)
-                    im = im.convert("RGB")
-                    im = im.resize((int(duration * fps), 200), 5)  # PI2.Image.LANCZOS
+                    im = cachedImage(imgFile, int(duration * fps))
                 except Exception as e:
                     print(e)
                     continue
@@ -280,10 +366,8 @@ class SoundSlave(threading.Thread):
                 self.command = soundQueue.get()
                 comWords = self.command.split(",")
                 soundFile = comWords[1]
-                sound = mixer.Sound(soundFile)
                 volume = float(comWords[2])
-                sound.set_volume(volume)
-                mixer.Sound.play(sound)
+                playSound(cachedSound(soundFile), volume)
                 if whitepulse is True:
                     led.blink(0, 0, 0.1, 0.3, 1,
                               True)  # ontime, offtime, fadeintime, fade out time, n-times, in background
@@ -310,11 +394,11 @@ class WaveSlave(threading.Thread):
         self.command = None
 
     def run(self):
+        # its own Sound (not the cache): this one fades with Sound.set_volume; the channel stays at 1.0
         sound = mixer.Sound(self.file)
         sound.set_volume(0.001)
-        mixer.Sound.play(sound)
-        while (int(time.time() * 1000)) < self.tijd:
-            time.sleep(0.001)
+        playSound(sound, 1.0)
+        waitUntil(self.tijd)
         if whitepulse is True:
             led.blink(self.stay, 0, self.up, self.down, 1,
                       True)  # ontime, offtime, fadeintime, fade out time, n-times, in background
@@ -341,8 +425,7 @@ class WaitSlave(threading.Thread):
         # time
         tijd = int(self.wait)
         try:
-            while (int(time.time() * 1000)) < tijd:
-                time.sleep(0.001)
+            waitUntil(tijd)
             try:
                 # sound
                 if comWords[0] == "s":
