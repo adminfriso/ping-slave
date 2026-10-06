@@ -79,6 +79,8 @@ whitepulse = True
 status = True
 # set by SetStatusLeds (scheduler thread), flushed by LightSlave: only LightSlave calls strip.show()
 statusDirty = False
+# True while SetStatusLeds has set pixels 5 and 13 and nothing cleared them yet
+statusLit = False
 # LightSlave sends the strip again this often (ms) while no image plays, so a corrupted transfer does not stay lit
 IDLE_REFRESH_MS = 50
 fadeout = True
@@ -99,33 +101,13 @@ Xg = 1
 Xb = 1
 
 # ---------- caches and timing helpers (optimization pass 2026-10-05) ----------
-# Loading a WAV (mixer.Sound) or opening + LANCZOS-resizing an image on every command costs CPU and, worse, delay
-# at the moment the sound or light has to start. Both are kept in memory (LRU, by path and file modification time),
-# so a repeated sample or image starts right away and the SD card is read less.
-SOUND_CACHE_BYTES = 48 * 1024 * 1024   # ~ WAV file sizes; the beacon has ~290 MB free
-IMAGE_CACHE_PIXELS = 8 * 1000 * 1000   # resized RGB images, ~24 MB
-soundCache = collections.OrderedDict()  # path -> (mtime, Sound, bytes); used by SoundSlave only
-soundCacheBytes = [0]
+# Opening + LANCZOS-resizing an image on every command costs CPU and delay at the moment the light has to start.
+# Images are kept in memory (LRU, by path, width and file modification time), so a repeated image starts right away.
+# Sounds are NOT cached (Gijs, 2026-10-06): a partial cache differs per beacon, so the same sample could start
+# sooner on one beacon than on another; and the audio library (~4 GB) can never be cached whole on 512 MB.
+IMAGE_CACHE_PIXELS = 16 * 1000 * 1000  # resized RGB images, ~48 MB (the budget the sound cache had)
 imageCache = collections.OrderedDict()  # (path, width) -> (mtime, Image, pixels); used by LightSlave only
 imageCachePixels = [0]
-
-
-def cachedSound(path):
-    mtime = os.path.getmtime(path)
-    hit = soundCache.pop(path, None)
-    if hit is not None:
-        if hit[0] == mtime:
-            soundCache[path] = hit  # most recently used
-            return hit[1]
-        soundCacheBytes[0] -= hit[2]
-    sound = mixer.Sound(path)
-    size = os.path.getsize(path)
-    soundCache[path] = (mtime, sound, size)
-    soundCacheBytes[0] += size
-    while soundCacheBytes[0] > SOUND_CACHE_BYTES and len(soundCache) > 1:
-        old = soundCache.popitem(last=False)[1]
-        soundCacheBytes[0] -= old[2]
-    return sound
 
 
 def cachedImage(path, width):
@@ -150,8 +132,7 @@ def cachedImage(path, width):
 
 
 def playSound(sound, volume):
-    # the volume goes on the channel, not on the (shared, cached) Sound: Sound.set_volume would also change copies of
-    # the same sample that are still playing. Set before play, so nothing plays at full volume for a moment.
+    # the volume goes on the channel, set before play, so nothing plays at full volume for a moment.
     channel = mixer.find_channel()
     if channel is None:  # all 50 channels busy: skip it, as Sound.play did
         return None
@@ -205,6 +186,9 @@ def SetStatus(check):
 #        led1 = Color(r, g, b)
 
        SetStatusLeds()
+   elif statusLit:
+       # statusoff came in while this tick was setting the leds: clear them again
+       ClearStatusLeds()
 
    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
@@ -218,7 +202,17 @@ def SetStatusLeds():
     #strip.setPixelColor(15, led0)
     # the strip is flushed by LightSlave (the only thread that calls strip.show()), also when no image plays:
     # SoundSlave no longer calls strip.show() 100x/s, which used to make these pixels visible as a side effect
-    global statusDirty
+    global statusDirty, statusLit
+    statusLit = True
+    statusDirty = True
+
+
+def ClearStatusLeds():
+    # e,statusoff: the status leds go off right away (they used to stay purple until the next image ended)
+    global statusDirty, statusLit
+    statusLit = False
+    strip.setPixelColor(5, Color(0, 0, 0))
+    strip.setPixelColor(13, Color(0, 0, 0))
     statusDirty = True
 
 def imgMerge(orImg, newImg, frame):
@@ -374,7 +368,7 @@ class SoundSlave(threading.Thread):
                 comWords = self.command.split(",")
                 soundFile = comWords[1]
                 volume = float(comWords[2])
-                playSound(cachedSound(soundFile), volume)
+                playSound(mixer.Sound(soundFile), volume)
                 if whitepulse is True:
                     led.blink(0, 0, 0.1, 0.3, 1,
                               True)  # ontime, offtime, fadeintime, fade out time, n-times, in background
@@ -401,7 +395,7 @@ class WaveSlave(threading.Thread):
         self.command = None
 
     def run(self):
-        # its own Sound (not the cache): this one fades with Sound.set_volume; the channel stays at 1.0
+        # its own Sound: this one fades with Sound.set_volume; the channel stays at 1.0
         sound = mixer.Sound(self.file)
         sound.set_volume(0.001)
         playSound(sound, 1.0)
@@ -533,6 +527,7 @@ if __name__ == '__main__':
                     whitepulse = True
                 elif com == "e,statusoff":
                     status = False
+                    ClearStatusLeds()
                 elif com == "e,statuson":
                     status = True
                     # was eerder: hier nog een keer scheduler.enter(...).
