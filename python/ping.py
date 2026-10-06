@@ -80,7 +80,7 @@ status = True
 # set by SetStatusLeds (scheduler thread), flushed by LightSlave: only LightSlave calls strip.show()
 statusDirty = False
 # LightSlave sends the strip again this often (ms) while no image plays, so a corrupted transfer does not stay lit
-IDLE_REFRESH_MS = 10
+IDLE_REFRESH_MS = 50
 fadeout = True
 fadein = False
 repeat = False
