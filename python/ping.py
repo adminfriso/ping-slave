@@ -79,8 +79,8 @@ whitepulse = True
 status = True
 # set by SetStatusLeds (scheduler thread), flushed by LightSlave: only LightSlave calls strip.show()
 statusDirty = False
-# True while SetStatusLeds has set pixels 5 and 13 and nothing cleared them yet
-statusLit = False
+# True while pixels 5 and 13 are purple; at startup they are (status on), after that only Blackleds switches them
+statusLit = True
 # LightSlave sends the strip again this often (ms) while no image plays, so a corrupted transfer does not stay lit
 IDLE_REFRESH_MS = 10
 fadeout = True
@@ -185,10 +185,10 @@ def SetStatus(check):
 #            r = 10
 #        led1 = Color(r, g, b)
 
-       SetStatusLeds()
-   elif statusLit:
-       # statusoff came in while this tick was setting the leds: clear them again
-       ClearStatusLeds()
+       # only keeps leds that are lit lit: e,statuson / e,statusoff take effect when the next light has passed
+       # (Blackleds at the end of an image), so in a chase the status leds switch right behind the wave (Gijs)
+       if statusLit:
+           SetStatusLeds()
 
    e1 = scheduler.enter(1, 1, SetStatus, ('check',))
 
@@ -207,14 +207,6 @@ def SetStatusLeds():
     statusDirty = True
 
 
-def ClearStatusLeds():
-    # e,statusoff: the status leds go off right away (they used to stay purple until the next image ended)
-    global statusDirty, statusLit
-    statusLit = False
-    strip.setPixelColor(5, Color(0, 0, 0))
-    strip.setPixelColor(13, Color(0, 0, 0))
-    statusDirty = True
-
 def imgMerge(orImg, newImg, frame):
     widthNewImg, heigthNewImg = newImg.size
     widthorImg, heigthorImg = orImg.size
@@ -231,10 +223,14 @@ def imgMerge(orImg, newImg, frame):
 
 
 def Blackleds():
+    global statusLit
     for y in range(0, LED_COUNT):
         strip.setPixelColor(y, Color(0, 0, 0))
+    # the end of a light is where e,statuson / e,statusoff become visible
     if status:
         SetStatusLeds()
+    else:
+        statusLit = False
     strip.show()
 
 def showLeds(im, frame):
@@ -527,7 +523,6 @@ if __name__ == '__main__':
                     whitepulse = True
                 elif com == "e,statusoff":
                     status = False
-                    ClearStatusLeds()
                 elif com == "e,statuson":
                     status = True
                     # was eerder: hier nog een keer scheduler.enter(...).
