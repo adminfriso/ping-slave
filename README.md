@@ -133,7 +133,12 @@ that was decided or measured. Nothing lives only in a chat, a terminal or someon
 
 # System parts
 
-- [`system/wifi-guard/`](system/wifi-guard/README.md): keeps at most one wifi radio of a beacon on the
-  network (internal first, external as fallback). Being tested on the test beacons, see its status table.
+- [`system/wifi-guard/`](system/wifi-guard/README.md): the beacon's two wifi radios. `single` (v1-v3, live on the fleet):
+  at most one radio on the network (internal first, external as fallback). `multihome` (v4): both radios on, the
+  internal carries the traffic and policy routing fails over to the external within ~15 s; costs 2 UniFi clients
+  per beacon, so it waits for F's go. `diag` gives read-only crash/disconnect evidence. See its status table.
 - [`system/performance-update/`](system/performance-update/README.md) (was `beacon-tuning`): system settings for every beacon (wifi power saving
-  off, bluetooth off, no apt/man-db timers, locale typo from `install.sh` fixed, cpu governor performance). Idempotent, see its status table.
+  off, bluetooth off, no apt/man-db timers, locale typo from `install.sh` fixed, cpu governor performance; v4:
+  wifi-guard v4, still single). Idempotent, pushed to the fleet in ~15 min, see its status table.
+
+Naming: new code and docs say **beacon** for a node, not "slave" (design notes, 2026-10-09). The repo name stays.

@@ -5,6 +5,8 @@ table below keeps the old names as they were logged.)
 
 Written 2026-10-04 (Gijs + Claude, on the control PC). **Status: v1 applied and rebooted on 1 beacon (`05447fc6`): OK.
 v2 (governor) applied there and survives a reboot. Next: step 2 of the rollout (five beacons).**
+**Status (2026-10-09): v4 (`wifiguard`) on branch `feature/wifi-multihome`, not on a beacon yet; see
+[v4 push](#v4-push-the-whole-fleet-in-15-minutes).**
 Update the status table at the bottom whenever a step is done.
 
 ## Why
@@ -35,6 +37,7 @@ the sound uses I2S (hifiberry-dac); neither uses the UART that `disable-bt` move
 | `timers` | the three timers masked (`systemctl mask --now`); `logrotate.timer` stays | unmasked and enabled |
 | `locale` | `/etc/default/locale` rewritten with the same values, quotes fixed (backup in `/var/lib/ping-performance-update/locale`) | backup put back |
 | `governor` | `ping-cpu-performance.service` (oneshot, after `raspi-config`) sets `performance` at every boot, and now | unit removed, `ondemand` |
+| `wifiguard` (v4) | wifi-guard v4 installed and running, through `system/wifi-guard/wifi-guard.sh install` from the deployed repo. Keeps the mode in `/etc/default/ping-wifi-guard` (`single` unless switched on purpose), so this push puts no extra client on the network | nothing (uninstalling the guard would put both radios on the network) |
 
 It never reboots. Log: `/var/log/ping-performance-update.log`.
 
@@ -44,9 +47,9 @@ On the beacon, as root (the master's `exec` already runs as root):
 
 | Command | Effect |
 |---|---|
-| `bash /root/ping-slave/system/performance-update/performance-update.sh status` | read-only; first line `PERFORMANCE-UPDATE OK v3` or `PERFORMANCE-UPDATE TODO <items>`, plus `REBOOT-NEEDED` when the bluetooth overlay waits for a reboot |
-| `... performance-update.sh apply` | prints `ok v3` (nothing to do), `changed <items>`, or `failed <items>`, then the status |
-| `... performance-update.sh revert` | undoes all five |
+| `bash /root/ping-slave/system/performance-update/performance-update.sh status` | read-only; first line `PERFORMANCE-UPDATE OK v4` or `PERFORMANCE-UPDATE TODO <items>`, plus `REBOOT-NEEDED` when the bluetooth overlay waits for a reboot |
+| `... performance-update.sh apply` | prints `ok v4` (nothing to do), `changed <items>`, or `failed <items>`, then the status |
+| `... performance-update.sh revert` | undoes the first five; the wifi guard stays |
 
 From the control PC: the updater's buttons **Performance status** (read-only) and **Performance-update ALL** (`apply` on
 every connected beacon one by one; beacons that are up to date answer `ok v3` and are not touched), or
@@ -61,6 +64,31 @@ and `fleet performance-update confirm` (token check, summary at the end). The to
 3. **Performance-update ALL** (or `fleet performance-update confirm`), then reboot all at a quiet moment
    (the bluetooth overlay needs it), then **Performance status (all)**. Not `exec all`: see the wifi-guard README, Known risks.
 4. Every later build-up: **Performance-update ALL** again; it only touches beacons that are not up to date.
+
+## v4 push: the whole fleet in 15 minutes
+
+v4 changes only the wifi guard (to v4, still `single`: the same behaviour as v3, no network setting changed) and needs
+no reboot, so the fleet push fits in one ~15 minute window. **Not during show hours** (Almere, 17:30-22:35 daily):
+the deploy restarts the app on every beacon; when to deploy is F's call.
+
+**Before the window: one beacon, one show evening.** Merge `feature/wifi-multihome` into `main`; on `05447fc6`:
+**Deploy**, `performance-update.sh apply` (`changed wifiguard`), again (`ok v4`), `wifi-guard.sh status`
+(`WIFI-GUARD OK ... mode=single`). Leave it through at least one show evening (17:30-22:35) and check `diag` the next
+morning before the fleet. Stop at any surprise.
+
+| Min | Step | Expected |
+|---|---|---|
+| 0-4 | **Deploy** all beacons (`git reset` + app restart; 40 beacons took 2 min on 2026-10-04) | every beacon on the new commit |
+| 4-10 | **Performance-update ALL**, 16 at a time | `changed wifiguard` (the five v3 items answer ok). 164 beacons took 3 min 52 s at 16 at a time on 2026-10-04; the guard restart adds ~3 s each, so ~5-6 min |
+| 10-13 | **Performance status (all)** | every beacon `PERFORMANCE-UPDATE OK v4` (`REBOOT-NEEDED` only where the v3 bluetooth reboot never happened) |
+| 13-15 | serials that did not answer go on the on-site list; status row below | - |
+
+`apply` reports `failed wifiguard (<reason>)`: `no wifi-guard v4 in the repo, deploy first` on a beacon whose repo is
+not deployed yet (the item runs the guard from the repo), or the first line of the guard's own `failed ...`. Rollback is
+not `revert`: revert the PR on `main`, **Deploy**, `wifi-guard.sh install live` (the v3 script replaces v4).
+
+Switching beacons to `multihome` is a **separate** step, after F confirms UniFi takes ~500 clients: see the wifi-guard
+README (v4).
 
 ## Adding a step later (stacking updates)
 
@@ -93,3 +121,4 @@ unit comments carry the new name; the backups move from `/var/lib/ping-beacon-tu
 | 2026-10-04 15:23-15:34 | step 2 reboots (see the wifi-guard table) + `status` | all 5 `PERFORMANCE-UPDATE OK v3` (no `REBOOT-NEEDED`), governor performance 1000 MHz, 45-63 °C, `throttled=0x0` | G + C |
 | 2026-10-04 16:00-16:26 | step 3: `fleet performance-update confirm`, 8 at a time | 25 min 25 s, 161: 150 changed + 6 ok, 5 no answer (during F's deploy of 40 beacons 16:22-16:24) | G + C |
 | 2026-10-04 16:30-16:34 | again, **16 at a time** | 3 min 52 s, 164: 157 ok, 7 changed (`165633a3 b42e815e b48c5ab2 f240a491 fa0034df fad0caec fd961f32`), **0 no answer**: all 164 `PERFORMANCE-UPDATE OK v3`; 158 still `REBOOT-NEEDED` (bluetooth overlay; reboot at a quiet moment) | G + C |
+| 2026-10-09 | v4 written: `wifiguard` (guard v4, mode kept); tested in a Debian container: a v3 beacon upgraded by `apply` (`changed wifiguard`, then `ok v4`; a `multihome` beacon stays multihome); qm review: the ARP item moved into the guard (multihome only), push plan waits for one show evening on `05447fc6` | branch `feature/wifi-multihome`, not on a beacon yet | F + C |

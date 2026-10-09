@@ -10,6 +10,9 @@
 #   locale     /etc/default/locale rewritten with the quote install.sh missed (LC_CTYPE="en_US.utf8)
 #   governor   cpu governor performance (always 1 GHz) instead of ondemand (700 MHz idle), now and at every boot
 #              (ping-cpu-performance.service, runs after raspi-config's init script that sets ondemand)
+#   wifiguard  (v4) wifi-guard v4 installed and running (the mode in /etc/default/ping-wifi-guard is kept:
+#              single until it is switched to multihome on purpose); needs the repo deployed, it runs
+#              system/wifi-guard/wifi-guard.sh from it
 #
 # Usage (as root; the master's exec already runs as root):
 #   performance-update.sh status   read-only: first line PERFORMANCE-UPDATE OK | TODO <items> [REBOOT-NEEDED], then details
@@ -18,11 +21,12 @@
 #
 # Stacking updates: a new step is one more item (<item>_ok, <item>_apply, <item>_revert, added to ITEMS) and a
 # VERSION bump. Every beacon then reports TODO <item> and the next apply sets only that item.
-#   performance-update.sh revert   undoes all five (bluetooth comes back after a reboot)
+#   performance-update.sh revert   undoes the first five (bluetooth comes back after a reboot); the wifi guard stays
+#                                  (wifi-guard.sh uninstall puts both radios on the network)
 #
 # It never reboots. Log: /var/log/ping-performance-update.log.
 
-VERSION=3
+VERSION=4
 
 LOG=/var/log/ping-performance-update.log
 CONFIG_TXT=/boot/config.txt
@@ -33,6 +37,8 @@ OLD_BACKUP_DIR=/var/lib/ping-beacon-tuning   # v1-v2 (beacon-tuning): moved to B
 TIMERS="apt-daily.timer apt-daily-upgrade.timer man-db.timer"
 BT_UNITS="hciuart.service bluetooth.service"
 GOV_UNIT=/etc/systemd/system/ping-cpu-performance.service
+GUARD_BIN=/usr/local/sbin/ping-wifi-guard
+GUARD_VERSION=4
 
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 
@@ -210,7 +216,27 @@ governor_revert() {
     for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo ondemand > "$g"; done
 }
 
-ITEMS="powersave bluetooth timers locale governor"
+# ---------- wifiguard (v4) ----------
+guard_src() {  # the wifi-guard script of this repo (next to this script, or the deployed clone)
+    local f
+    for f in "$(dirname "$(readlink -f "$0")")/../wifi-guard/wifi-guard.sh" /root/ping-slave/system/wifi-guard/wifi-guard.sh; do
+        [ -f "$f" ] && [ "$(sed -n 's/^VERSION=//p' "$f")" -ge "$GUARD_VERSION" ] 2>/dev/null && { readlink -f "$f"; return 0; }
+    done
+    return 1
+}
+guard_installed() { sed -n 's/^VERSION=//p' "$GUARD_BIN" 2>/dev/null; }
+wifiguard_ok() {
+    [ "$(guard_installed)" -ge "$GUARD_VERSION" ] 2>/dev/null && systemctl is-active -q ping-wifi-guard.service 2>/dev/null
+}
+wifiguard_apply() {
+    local src out
+    src=$(guard_src) || { FAIL_REASON="wifiguard: no wifi-guard v$GUARD_VERSION in the repo, deploy first"; return 1; }
+    out=$(bash "$src" install 2>&1)   # no mode arguments: dry/live and single/multihome stay as they are
+    case "$out" in failed*) FAIL_REASON="wifiguard: $(echo "$out" | head -n1)"; return 1 ;; esac
+}
+wifiguard_revert() { :; }   # never here: uninstalling the guard puts both radios on the network
+
+ITEMS="powersave bluetooth timers locale governor wifiguard"
 
 # ---------- commands ----------
 cmd_status() {
@@ -226,6 +252,7 @@ cmd_status() {
     echo "  bluetooth: overlay=$(bt_overlay_set && echo yes || echo no) hci0=$([ -e /sys/class/bluetooth/hci0 ] && echo present || echo gone)$(for u in $BT_UNITS; do echo -n " ${u%.service}=$(systemctl is-enabled "$u" 2>/dev/null)/$(systemctl is-active "$u" 2>/dev/null)"; done)"
     echo "  timers:$(for t in $TIMERS; do echo -n " ${t%.timer}=$(systemctl is-enabled "$t" 2>/dev/null)"; done)"
     echo "  locale: $(locale_ok && echo fixed || echo "not fixed")"
+    echo "  wifiguard: installed=v$(guard_installed || true) service=$(systemctl is-active ping-wifi-guard.service 2>/dev/null) $(grep -E '^(MODE|ENABLED)=' /etc/default/ping-wifi-guard 2>/dev/null | paste -sd' ')"
     echo "  governor: $(gov_current) $(($(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null || echo 0) / 1000)) MHz unit=$(systemctl is-enabled ping-cpu-performance.service 2>/dev/null || echo none) $(vcgencmd measure_temp 2>/dev/null) $(vcgencmd get_throttled 2>/dev/null)"
     return 0
 }
@@ -246,7 +273,7 @@ cmd_apply() {
         ${i}_apply
         if ${i}_ok; then changed="$changed $i"; else failed="$failed $i"; fi
     done
-    if [ -n "$failed" ]; then echo "failed$failed"; log "apply v$VERSION: failed$failed changed$changed"; cmd_status; exit 1; fi
+    if [ -n "$failed" ]; then echo "failed$failed${FAIL_REASON:+ ($FAIL_REASON)}"; log "apply v$VERSION: failed$failed changed$changed"; cmd_status; exit 1; fi
     if [ -n "$changed" ]; then echo "changed$changed"; log "apply v$VERSION: changed$changed"; else echo "ok v$VERSION"; fi
     bt_reboot_needed && echo "reboot needed: bluetooth overlay takes effect at the next boot"
     cmd_status
@@ -266,5 +293,5 @@ case "$1" in
     status) cmd_status ;;
     apply) cmd_apply ;;
     revert) cmd_revert ;;
-    *) sed -n '2,23p' "$0"; exit 2 ;;
+    *) sed -n '2,30p' "$0"; exit 2 ;;
 esac
