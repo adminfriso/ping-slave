@@ -138,7 +138,7 @@ that was decided or measured. Nothing lives only in a chat, a terminal or someon
   internal carries the traffic and policy routing fails over to the external within ~15 s; costs 2 UniFi clients
   per beacon, so it waits for F's go. `diag` gives read-only crash/disconnect evidence. See its status table.
 - [`system/performance-update/`](system/performance-update/README.md) (was `beacon-tuning`): system settings for every beacon (wifi power saving
-  off, bluetooth off, no apt/man-db timers, locale typo from `install.sh` fixed, cpu governor performance; v4: ARP
-  settings for two radios on one subnet, wifi-guard v4). Idempotent, pushed to the fleet in ~15 min, see its status table.
+  off, bluetooth off, no apt/man-db timers, locale typo from `install.sh` fixed, cpu governor performance; v4:
+  wifi-guard v4, still single). Idempotent, pushed to the fleet in ~15 min, see its status table.
 
 Naming: new code and docs say **beacon** for a node, not "slave" (design notes, 2026-10-09). The repo name stays.

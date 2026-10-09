@@ -27,11 +27,18 @@ How the routing works (tested on Debian iproute2-ss190107, the buster generation
 - dhcpcd keeps the main table; a radio without an address simply falls through to it. `single` mode and
   `uninstall` remove the rules and tables (`mh_clear`).
 - The probes are `ping -I <radio>`: bound to the radio, they bypass table 100, so each radio is measured on its own.
-- On a failover the node socket to the master (it still has the old path's address) is closed with `ss -K`, so
-  socket.io reconnects through the new path at once instead of after its ~30 s ping timeout. Best effort: a
-  kernel without socket-destroy support leaves it to socket.io.
-- ARP flux (two radios on one /22 answering for each other's address) is fixed by performance-update v4 (`arpflux`),
-  also for the v3 probe.
+- On a failover the node socket to the master is still pinned to the old path's address by rule 1000/1001, so it
+  keeps using the degraded radio. The guard closes it with `ss -K` so socket.io reconnects through the new path at
+  once. `ss -K` needs `CONFIG_INET_DIAG_DESTROY` in the kernel, which the Raspberry Pi OS kernel probably lacks
+  (qm review, 2026-10-09; a test kernel without it did nothing). The guard checks that the socket is gone and
+  otherwise logs `kick failed ...` once per boot; socket.io then reconnects after its ping timeout (~30 s).
+  **Check on `05447fc6`** (step M3 below). If it fails there, the open choice is restarting the node app on a failover
+  (a gap in light/sound) or living with ~30 s.
+- ARP flux (two radios on one /22 answering ARP for each other's address) is handled by the guard itself in multihome:
+  `install live multihome` writes `/etc/sysctl.d/90-ping-multihome.conf` (`arp_ignore=1`, `arp_announce=2`,
+  `rp_filter=2`, the old values kept in `/var/lib/ping-wifi-guard/sysctl-arp`); `install live single` and
+  `uninstall` remove it and put the old values back. Single mode changes no network settings (qm review: no
+  fleet-wide network change for a mode that never keeps two radios on).
 
 Switching (per beacon, idempotent; the mode is stored in `/etc/default/ping-wifi-guard`):
 
@@ -43,6 +50,18 @@ bash /root/ping-slave/system/wifi-guard/wifi-guard.sh install live single      #
 **Multihome needs F's go first**: UniFi must accept ~500 clients (more APs, or the APs' client limit), which nobody has
 confirmed yet (qm, 2026-10-09). Decided 2026-10-09 (F): ship it switchable; the fleet gets v4 in `single` mode through
 performance-update v4, then beacons are switched to `multihome` once UniFi is confirmed.
+
+Multihome on one beacon (after F's go, outside show hours), in order:
+
+- M1. `install live multihome` on `05447fc6`, `status`: `WIFI-GUARD OK multihome`, both radios associated, `active=int`;
+  `diag`: `arp: ignore=1 announce=2 rp_filter=2`, rules 1000/1001/1010.
+- M2. Light and sound on it; `diag` `load:` next to a single-mode beacon (the loop probes every 5 s on a Pi Zero).
+- M3. Failover: block the internal (`rfkill block` its phy, or a UniFi block of its MAC): log `path int -> ext` within
+  ~20 s, the beacon stays in the master's list. Log has `kick failed`? Then the socket took ~30 s (see above).
+- M4. Unblock: `path ext -> int` after ~60 s. Then one show evening on it before more beacons.
+
+Rollback of v4 itself: `install live single` is still the v4 code (v3 behaviour). The real v3 is: revert the PR on
+`main`, **Deploy**, `wifi-guard.sh install live` (the v3 script then replaces the installed v4).
 
 **Finding the crash cause first:** `wifi-guard.sh diag` (read-only, writes nothing) prints what a crash or a
 disconnect leaves behind: reboots without a shutdown before them (`last -x`), under-voltage since boot
@@ -297,6 +316,7 @@ scenario fails when a radio is ever switched off. 17/17 ok on 2026-10-09.
 | 2026-10-04 16:26-16:30 | step 16: `fleet install live confirm` again, 8 at a time | 3 min 22 s, 165: 160 ok, 3 changed (`165633a3 9e37fba1 b42e815e`), `f240a491` changed (status read 4 s before its first switch; external off at 16:29:59, -78 dBm), 1 no answer (`d6ebbe3d`, now disconnected) | G + C |
 | 2026-10-04 16:35 | step 17: fleet `status`, 16 at a time | 49 s, 164 connected of 206: **all 164 `WIFI-GUARD OK v3`, all `active=int`, 0 on external, 0 two radios**. Open: `d6ebbe3d` disconnected (weak internal); no broken-internal beacon has come online through its external radio yet; UniFi client count to check (F) | G + C |
 | 2026-10-09 | F: beacons crash or disconnect since the v3 wifi + performance updates; design notes "Raspberry Pi WLAN Failover" (both radios on, failover by routing) | v4 written: `MODE=multihome` (default stays `single`), `diag`; simulation 17/17; routing tested on Debian iproute2-ss190107 (tables, rules, probe bypass, fallback to main, clear); v3→v4 upgrade and idempotence tested in a container through performance-update v4. Branch `feature/wifi-multihome`, not on a beacon yet. Open: F confirms UniFi takes ~500 clients before any `multihome` | F + C |
+| 2026-10-09 | qm review of #13: ARP settings only with multihome (moved from performance-update into the guard), `ss -K` checked and `kick failed` logged once, push plan: one beacon through a show evening first, failure reason passed through, real v3 rollback documented | simulation 17/17 (single 9 + multihome 8); container: push = `changed wifiguard` then `ok v4`, ARP on with multihome / off with single and uninstall (old values back), no repo guard = `failed wifiguard (... deploy first)`; `ss -K` on a kernel without destroy support: socket stays, `kick failed` logged once | F + C |
 Tested with `wifi-guard-test.ps1` (now in ping-controller `scripts/wifi-guard/`; it was `C:\Shared\Development\ping-wifi-guard\`) (sends the script to the beacon as a
 here-document through the master, no branch needed; steps in `next.txt`, reports in `reports\`). The 4 beacons with a
 broken internal radio were not reachable, so steps 9-11 are still open.

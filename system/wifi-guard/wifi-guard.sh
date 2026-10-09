@@ -7,6 +7,7 @@
 #              SLA_WINDOW probes) decides which radio carries the traffic: policy routing (ip rule + tables
 #              100-102), so a failover is a route change, never a radio switched off or a re-association. The
 #              internal gets the traffic back after FAILBACK_HOLD s without loss. Costs 2 UniFi clients per beacon.
+#              install live multihome also sets the ARP sysctls two radios on one subnet need; single removes them.
 #
 # Single mode. A beacon (Pi Zero W) has two radios: the internal one (driver brcmfmac) and an external USB one.
 # With both on, 5 UniFi APs see ~500 clients instead of ~250. The guard:
@@ -50,6 +51,7 @@ LOG=/var/log/ping-wifi-guard.log
 UNIT_LOOP=/etc/systemd/system/ping-wifi-guard.service
 UNIT_BOOT=/etc/systemd/system/ping-wifi-guard-boot.service
 UDEV_RULE=/etc/udev/rules.d/70-ping-wifi-guard.rules
+ARP_CONF=/etc/sysctl.d/90-ping-multihome.conf
 
 # defaults (override in $CONF)
 MASTER_IP=192.168.8.50
@@ -222,9 +224,44 @@ mh_apply() {  # $1 = int|ext, the radio that carries the traffic. Reprograms onl
     ip route flush cache 2>/dev/null
     mkdir -p "$RUN_DIR"; echo "$sig" > "$RUN_DIR/mh-sig"
 }
-mh_kick_socket() {  # the node socket to the master still uses the old path's address: close it, node reconnects now
-    command -v ss >/dev/null && ss -K dst "$MASTER_IP" dport = ":$MASTER_PORT" >/dev/null 2>&1
+mh_kick_socket() {  # $1 = the address of the path we left. The node socket to the master is pinned to it by rule
+    # 1000/1001, so it would keep using the degraded radio: close it, socket.io reconnects through the new path now.
+    # ss -K needs CONFIG_INET_DIAG_DESTROY in the kernel; without it socket.io reconnects after its ~30 s timeout.
+    [ -n "$1" ] || return 0
+    command -v ss >/dev/null || return 0
+    ss -K src "$1" dst "$MASTER_IP" dport = ":$MASTER_PORT" >/dev/null 2>&1
+    if ss -tn state established dst "$MASTER_IP" 2>/dev/null | grep -qF " $1:" && [ ! -f "$RUN_DIR/kick-failed" ]; then
+        touch "$RUN_DIR/kick-failed"   # log once per boot (SD writes)
+        log "kick failed: ss -K did not close the master socket on $1 (no INET_DIAG_DESTROY?); socket.io reconnects after its timeout"
+    fi
     return 0
+}
+
+# ---------- ARP settings, multihome only (two radios on one /22 answer ARP for each other's address otherwise) ----
+arp_content() {
+    cat <<'EOF'
+# ping-wifi-guard multihome: two wifi radios on one subnet. Each radio answers ARP only for its own address and
+# announces only that one (no ARP flux); replies may come in on the other radio (loose reverse-path filter).
+net.ipv4.conf.all.arp_ignore = 1
+net.ipv4.conf.all.arp_announce = 2
+net.ipv4.conf.all.rp_filter = 2
+EOF
+}
+arp_sync() {  # multihome + live: the file and the values; otherwise: none, the values from before put back
+    if [ "$MODE" = multihome ] && [ "$ENABLED" = "1" ]; then
+        [ -f "$ARP_CONF" ] && arp_content | cmp -s - "$ARP_CONF" && return 0
+        mkdir -p "$STATE_DIR"
+        [ -f "$STATE_DIR/sysctl-arp" ] || for k in arp_ignore arp_announce rp_filter; do
+            echo "net.ipv4.conf.all.$k=$(sysctl -n "net.ipv4.conf.all.$k" 2>/dev/null)"; done > "$STATE_DIR/sysctl-arp"
+        arp_content > "$ARP_CONF.tmp" && chmod 644 "$ARP_CONF.tmp" && mv "$ARP_CONF.tmp" "$ARP_CONF"
+        sysctl -q -p "$ARP_CONF" >/dev/null 2>&1
+        CHANGED="$CHANGED arp:on"
+    else
+        [ -f "$ARP_CONF" ] || return 0
+        rm -f "$ARP_CONF"
+        [ -f "$STATE_DIR/sysctl-arp" ] && sysctl -q -p "$STATE_DIR/sysctl-arp" >/dev/null 2>&1 && rm -f "$STATE_DIR/sysctl-arp"
+        CHANGED="$CHANGED arp:off"
+    fi
 }
 sla_probe() {  # one probe bound to the radio: associated, an address, the master or else the gateway answers
     [ -n "$1" ] || return 1
@@ -244,7 +281,7 @@ hist_lost() { local h=${1//1/}; echo ${#h}; }
 
 cmd_run_multihome() {
     mkdir -p "$RUN_DIR" "$STATE_DIR"
-    local path="" ih="" eh="" il el clean_since=0 now want KICK=0
+    local path="" ih="" eh="" il el clean_since=0 now want kick_ip=""
     log "guard v$VERSION started (mode=multihome enabled=$ENABLED)"
     while true; do
         find_radios
@@ -269,11 +306,13 @@ cmd_run_multihome() {
         fi
         if [ "$want" != "$path" ]; then
             log "path ${path:-none} -> $want (internal $INT lost $il/${#ih}, external ${EXT:-none} lost $el/${#eh})"
-            [ -n "$path" ] && [ "$ENABLED" = "1" ] && KICK=1
+            if [ -n "$path" ] && [ "$ENABLED" = "1" ]; then
+                if [ "$path" = int ]; then kick_ip=$(ip4_of "$INT"); else kick_ip=$(ip4_of "$EXT"); fi
+            fi
             path=$want; active_set "$path"
         fi
         mh_apply "$path"
-        [ "$KICK" = 1 ] && { mh_kick_socket; KICK=0; }
+        [ -n "$kick_ip" ] && { mh_kick_socket "$kick_ip"; kick_ip=""; }
         trim_log
         sleep "$MH_INTERVAL"
     done
@@ -293,10 +332,11 @@ cmd_diag() {  # read-only: what a crash or a disconnect left behind (no files wr
     echo "  kernel (radios, usb, power, memory):"
     dmesg 2>/dev/null | grep -iE 'brcmf|rt2800|rt2x00|usb [0-9-]+: (reset|disconnect|new)|under-voltage|voltage|oom|out of memory|killed process|mmc0' | tail -n 15 | sed 's/^/    /'
     echo "  guard log: $(grep -cE 'switch (to|off|on)|path .* ->' "$LOG" 2>/dev/null || echo 0) switches/path changes in the log, last ones:"
-    grep -E 'switch|path |probe|boot:|failing' "$LOG" 2>/dev/null | tail -n 6 | sed 's/^/    /'
+    grep -E 'switch|path |probe|boot:|failing|kick' "$LOG" 2>/dev/null | tail -n 6 | sed 's/^/    /'
     for i in $(ls /sys/class/net | grep '^wlan'); do
         echo "  $i: $(describe "$i") retries=$(iw dev "$i" station dump 2>/dev/null | awk '/tx retries/ {print $3; exit}') fails=$(iw dev "$i" station dump 2>/dev/null | awk '/tx failed/ {print $3; exit}')"
     done
+    echo "  arp: ignore=$(sysctl -n net.ipv4.conf.all.arp_ignore 2>/dev/null) announce=$(sysctl -n net.ipv4.conf.all.arp_announce 2>/dev/null) rp_filter=$(sysctl -n net.ipv4.conf.all.rp_filter 2>/dev/null)"
     echo "  rules: $(ip rule show 2>/dev/null | grep -E '^10(00|01|10):' | paste -sd';')"
     return 0
 }
@@ -463,6 +503,7 @@ cmd_install() {
             fi
             ENABLED=$want ;;
     esac; done
+    arp_sync
     write_if_changed "$UNIT_BOOT" 644 <<EOF && UNITS=1
 [Unit]
 Description=Ping wifi guard: radios at boot (internal first; external off unless MODE=multihome)
@@ -524,6 +565,7 @@ cmd_uninstall() {
     systemctl unmask -q systemd-rfkill.service systemd-rfkill.socket 2>/dev/null
     systemctl daemon-reload; udevadm control --reload >/dev/null 2>&1
     ENABLED=1; find_radios; radio_on "$INT"; radio_on "$EXT"; mh_clear
+    MODE=single; arp_sync
     rm -rf "$RUN_DIR"
     log "uninstalled: both radios on"
     echo "uninstalled (both radios on: $INT $EXT; keep the $CONF and $STATE_DIR for a reinstall)"
