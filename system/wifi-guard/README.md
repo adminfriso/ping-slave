@@ -57,7 +57,8 @@ Multihome on one beacon (after F's go, outside show hours), in order:
   `diag`: `arp: ignore=1 announce=2 rp_filter=2`, rules 1000/1001/1010.
 - M2. Light and sound on it; `diag` `load:` next to a single-mode beacon (the loop probes every 5 s on a Pi Zero).
 - M3. Failover: block the internal (`rfkill block` its phy, or a UniFi block of its MAC): log `path int -> ext` within
-  ~20 s, the beacon stays in the master's list. Log has `kick failed`? Then the socket took ~30 s (see above).
+  ~20 s, the beacon stays in the master's list. Log has `kick failed`? Then the socket took ~30 s (see above):
+  **expected gap**, the beacon misses the master's commands (light/sound) for those ~30 s once per failover.
 - M4. Unblock: `path ext -> int` after ~60 s. Then one show evening on it before more beacons.
 
 Rollback of v4 itself: `install live single` is still the v4 code (v3 behaviour). The real v3 is: revert the PR on
