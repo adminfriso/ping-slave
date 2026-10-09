@@ -10,6 +10,11 @@
 #   locale     /etc/default/locale rewritten with the quote install.sh missed (LC_CTYPE="en_US.utf8)
 #   governor   cpu governor performance (always 1 GHz) instead of ondemand (700 MHz idle), now and at every boot
 #              (ping-cpu-performance.service, runs after raspi-config's init script that sets ondemand)
+#   arpflux    (v4) two radios on one subnet: each answers ARP only for its own address (arp_ignore=1,
+#              arp_announce=2) and replies may come in on the other radio (rp_filter=2); /etc/sysctl.d, now and at boot
+#   wifiguard  (v4) wifi-guard v4 installed and running (the mode in /etc/default/ping-wifi-guard is kept:
+#              single until it is switched to multihome on purpose); needs the repo deployed, it runs
+#              system/wifi-guard/wifi-guard.sh from it
 #
 # Usage (as root; the master's exec already runs as root):
 #   performance-update.sh status   read-only: first line PERFORMANCE-UPDATE OK | TODO <items> [REBOOT-NEEDED], then details
@@ -18,11 +23,12 @@
 #
 # Stacking updates: a new step is one more item (<item>_ok, <item>_apply, <item>_revert, added to ITEMS) and a
 # VERSION bump. Every beacon then reports TODO <item> and the next apply sets only that item.
-#   performance-update.sh revert   undoes all five (bluetooth comes back after a reboot)
+#   performance-update.sh revert   undoes the first six (bluetooth comes back after a reboot); the wifi guard stays
+#                                  (wifi-guard.sh uninstall puts both radios on the network)
 #
 # It never reboots. Log: /var/log/ping-performance-update.log.
 
-VERSION=3
+VERSION=4
 
 LOG=/var/log/ping-performance-update.log
 CONFIG_TXT=/boot/config.txt
@@ -33,6 +39,9 @@ OLD_BACKUP_DIR=/var/lib/ping-beacon-tuning   # v1-v2 (beacon-tuning): moved to B
 TIMERS="apt-daily.timer apt-daily-upgrade.timer man-db.timer"
 BT_UNITS="hciuart.service bluetooth.service"
 GOV_UNIT=/etc/systemd/system/ping-cpu-performance.service
+ARP_CONF=/etc/sysctl.d/90-ping-multihome.conf
+GUARD_BIN=/usr/local/sbin/ping-wifi-guard
+GUARD_VERSION=4
 
 log() { echo "$(date '+%F %T') $*" >> "$LOG"; }
 
@@ -210,7 +219,56 @@ governor_revert() {
     for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo ondemand > "$g"; done
 }
 
-ITEMS="powersave bluetooth timers locale governor"
+# ---------- arpflux (v4) ----------
+arp_content() {
+    cat <<'EOF'
+# ping performance-update: two wifi radios on one subnet (wifi-guard probe, multihome). Without this both radios
+# answer ARP for both addresses (ARP flux) and the AP/router can send one radio's traffic to the other.
+net.ipv4.conf.all.arp_ignore = 1
+net.ipv4.conf.all.arp_announce = 2
+net.ipv4.conf.all.rp_filter = 2
+EOF
+}
+arp_live() { [ "$(sysctl -n "net.ipv4.conf.all.$1" 2>/dev/null)" = "$2" ]; }
+arpflux_ok() {
+    [ -f "$ARP_CONF" ] && arp_content | cmp -s - "$ARP_CONF" &&
+        arp_live arp_ignore 1 && arp_live arp_announce 2 && arp_live rp_filter 2
+}
+arpflux_apply() {
+    mkdir -p "$BACKUP_DIR"
+    [ -f "$BACKUP_DIR/sysctl-arp" ] || for k in arp_ignore arp_announce rp_filter; do
+        echo "net.ipv4.conf.all.$k=$(sysctl -n "net.ipv4.conf.all.$k" 2>/dev/null)"; done > "$BACKUP_DIR/sysctl-arp"
+    arp_content > "$ARP_CONF.tmp" && chmod 644 "$ARP_CONF.tmp" && mv "$ARP_CONF.tmp" "$ARP_CONF"
+    sysctl -q -p "$ARP_CONF" >/dev/null 2>&1
+}
+arpflux_revert() {
+    rm -f "$ARP_CONF"
+    if [ -f "$BACKUP_DIR/sysctl-arp" ]; then  # the values from before apply
+        sysctl -q -p "$BACKUP_DIR/sysctl-arp" >/dev/null 2>&1 && rm -f "$BACKUP_DIR/sysctl-arp"
+    else
+        sysctl -q -w net.ipv4.conf.all.arp_ignore=0 net.ipv4.conf.all.arp_announce=0 >/dev/null 2>&1
+    fi
+}
+
+# ---------- wifiguard (v4) ----------
+guard_src() {  # the wifi-guard script of this repo (next to this script, or the deployed clone)
+    local f
+    for f in "$(dirname "$(readlink -f "$0")")/../wifi-guard/wifi-guard.sh" /root/ping-slave/system/wifi-guard/wifi-guard.sh; do
+        [ -f "$f" ] && [ "$(sed -n 's/^VERSION=//p' "$f")" -ge "$GUARD_VERSION" ] 2>/dev/null && { readlink -f "$f"; return 0; }
+    done
+    return 1
+}
+guard_installed() { sed -n 's/^VERSION=//p' "$GUARD_BIN" 2>/dev/null; }
+wifiguard_ok() {
+    [ "$(guard_installed)" -ge "$GUARD_VERSION" ] 2>/dev/null && systemctl is-active -q ping-wifi-guard.service 2>/dev/null
+}
+wifiguard_apply() {
+    local src; src=$(guard_src) || { echo "wifiguard: no wifi-guard v$GUARD_VERSION found, deploy the repo first" >&2; return 1; }
+    bash "$src" install >/dev/null 2>&1   # no mode arguments: dry/live and single/multihome stay as they are
+}
+wifiguard_revert() { :; }   # never here: uninstalling the guard puts both radios on the network
+
+ITEMS="powersave bluetooth timers locale governor arpflux wifiguard"
 
 # ---------- commands ----------
 cmd_status() {
@@ -226,6 +284,8 @@ cmd_status() {
     echo "  bluetooth: overlay=$(bt_overlay_set && echo yes || echo no) hci0=$([ -e /sys/class/bluetooth/hci0 ] && echo present || echo gone)$(for u in $BT_UNITS; do echo -n " ${u%.service}=$(systemctl is-enabled "$u" 2>/dev/null)/$(systemctl is-active "$u" 2>/dev/null)"; done)"
     echo "  timers:$(for t in $TIMERS; do echo -n " ${t%.timer}=$(systemctl is-enabled "$t" 2>/dev/null)"; done)"
     echo "  locale: $(locale_ok && echo fixed || echo "not fixed")"
+    echo "  arpflux: arp_ignore=$(sysctl -n net.ipv4.conf.all.arp_ignore 2>/dev/null) arp_announce=$(sysctl -n net.ipv4.conf.all.arp_announce 2>/dev/null) rp_filter=$(sysctl -n net.ipv4.conf.all.rp_filter 2>/dev/null) conf=$([ -f "$ARP_CONF" ] && echo yes || echo no)"
+    echo "  wifiguard: installed=v$(guard_installed || true) service=$(systemctl is-active ping-wifi-guard.service 2>/dev/null) $(grep -E '^(MODE|ENABLED)=' /etc/default/ping-wifi-guard 2>/dev/null | paste -sd' ')"
     echo "  governor: $(gov_current) $(($(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null || echo 0) / 1000)) MHz unit=$(systemctl is-enabled ping-cpu-performance.service 2>/dev/null || echo none) $(vcgencmd measure_temp 2>/dev/null) $(vcgencmd get_throttled 2>/dev/null)"
     return 0
 }
@@ -266,5 +326,5 @@ case "$1" in
     status) cmd_status ;;
     apply) cmd_apply ;;
     revert) cmd_revert ;;
-    *) sed -n '2,23p' "$0"; exit 2 ;;
+    *) sed -n '2,30p' "$0"; exit 2 ;;
 esac

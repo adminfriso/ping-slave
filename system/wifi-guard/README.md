@@ -1,7 +1,54 @@
-# Wi-Fi guard: one radio per beacon
+# Wi-Fi guard: one radio per beacon, or both with failover routing (v4)
 
 Written 2026-09-30 (Gijs + Claude, on the control PC). **Status (2026-10-04): v1 live on the 4 working test beacons (`cde53af8`, `9e4fab63`, `226b5ac4`, `40ab815e`); v3 (probe back to internal after an outage, internal fixed as primary) on `feature/beacon-system`, passes the simulation, runbook steps 3-7 done on `05447fc6`. Next: step 8 (more test beacons). Decided 2026-10-04 (F): the fleet gets the guard with the external radios still blocked, then F unblocks them (steps 14-16).**
+**Status (2026-10-09): v4 on branch `feature/wifi-multihome`, not on a beacon yet.** Beacons crash or disconnect
+since the v3 wifi + performance updates (F, 2026-10-09); cause not proven yet, see [v4](#v4-multihome-both-radios-on-failover-by-routing).
 Update the status table at the bottom whenever a step is done: this file is how Gijs and Friso stay in sync.
+
+## v4: multihome (both radios on, failover by routing)
+
+From the design notes "Raspberry Pi WLAN Failover" (F, 2026-10-09). v1-v3 fail over by **switching radios**: the
+internal goes off, the external comes on and has to associate and get a lease, so every failover (and every probe
+back) is an outage of the node socket, and a flapping internal means repeated outages. v4 adds `MODE=multihome`:
+
+| | `single` (v3, still the default) | `multihome` (v4) |
+|---|---|---|
+| Radios on the network | one (two for at most 90 s during a probe) | **both, always**; no radio is ever switched off |
+| UniFi clients per beacon | 1 | **2** (~500 for the fleet: why the externals were blocked, 2026-09-30) |
+| Failover | swap radios after 120 s failing (offline while the other associates) | **route change** after `SLA_MAX_LOSS` (3) of the last `SLA_WINDOW` (6) probes lost, probes every 5 s: ~15 s, the standby radio is already associated |
+| Failback | probe after 300 s, up to 3600 s | internal without loss for `FAILBACK_HOLD` (60 s) |
+| Whole network down (master + gateway) | swaps after 120 s | no change: it moves only when the other path is **better** |
+
+How the routing works (tested on Debian iproute2-ss190107, the buster generation, 2026-10-09):
+
+- `ip rule` 1000/1001: traffic **from** the internal's / external's address leaves through that radio (tables 101/102),
+  so the master can reach a beacon on both addresses and replies never cross radios.
+- `ip rule` 1010 → table 100: everything else (the node socket, new connections) leaves through the **active path**.
+- dhcpcd keeps the main table; a radio without an address simply falls through to it. `single` mode and
+  `uninstall` remove the rules and tables (`mh_clear`).
+- The probes are `ping -I <radio>`: bound to the radio, they bypass table 100, so each radio is measured on its own.
+- On a failover the node socket to the master (it still has the old path's address) is closed with `ss -K`, so
+  socket.io reconnects through the new path at once instead of after its ~30 s ping timeout. Best effort: a
+  kernel without socket-destroy support leaves it to socket.io.
+- ARP flux (two radios on one /22 answering for each other's address) is fixed by performance-update v4 (`arpflux`),
+  also for the v3 probe.
+
+Switching (per beacon, idempotent; the mode is stored in `/etc/default/ping-wifi-guard`):
+
+```sh
+bash /root/ping-slave/system/wifi-guard/wifi-guard.sh install live multihome   # both radios on
+bash /root/ping-slave/system/wifi-guard/wifi-guard.sh install live single      # back to v3 behaviour
+```
+
+**Multihome needs F's go first**: UniFi must accept ~500 clients (more APs, or the APs' client limit), which nobody has
+confirmed yet (qm, 2026-10-09). Decided 2026-10-09 (F): ship it switchable; the fleet gets v4 in `single` mode through
+performance-update v4, then beacons are switched to `multihome` once UniFi is confirmed.
+
+**Finding the crash cause first:** `wifi-guard.sh diag` (read-only, writes nothing) prints what a crash or a
+disconnect leaves behind: reboots without a shutdown before them (`last -x`), under-voltage since boot
+(`get_throttled` bit 16; powersave off + governor performance + the USB radio draw more current), memory and the
+uptime of node/python (an app crash vs. a beacon reboot), kernel lines about brcmfmac/rt2800usb/USB resets/OOM, and the
+guard's recent switches. Run it on the beacons that dropped before deciding it is wifi.
 
 ## Why
 
@@ -85,7 +132,9 @@ On the beacon, as root (the master's `exec` already runs as root):
 |---|---|
 | `bash /root/ping-slave/system/wifi-guard/wifi-guard.sh status` | read-only; first line `WIFI-GUARD OK / TWO-RADIOS-ON-NETWORK / NO-RADIO-ASSOCIATED`, then both radios (driver, MAC, on/off, signal, ip) |
 | `... wifi-guard.sh install dry` | installs the guard in **dry run**: it only logs what it would switch, each decision once until it changes (not every 15 s: SD card writes) |
-| `... wifi-guard.sh install live` | installs or updates it and lets it switch. Prints `ok v3` (nothing to do), `changed ...`, or `failed <reason>` |
+| `... wifi-guard.sh install live` | installs or updates it and lets it switch. Prints `ok v4` (nothing to do), `changed ...`, or `failed <reason>` |
+| `... wifi-guard.sh install live multihome` / `... single` | (v4) sets the mode, see v4 above; `install` without a mode keeps it |
+| `... wifi-guard.sh diag` | (v4) read-only crash/disconnect evidence: reboots, power, memory, app uptimes, kernel radio/USB lines, guard log |
 | `... wifi-guard.sh uninstall` | removes it and switches **both** radios on again (2 clients per beacon!) |
 
 From the control PC (`scripts\beacons` in ping-controller):
@@ -198,7 +247,7 @@ Who: **G** = Gijs (control PC), **F** = Friso, **C** = Claude. Nothing on the ma
 
 ## Simulation test
 
-`bash system/wifi-guard/test-wifi-guard.sh` (Mac, Linux or Git Bash; ~2 min in Git Bash) sources the real
+`bash system/wifi-guard/test-wifi-guard.sh` (Mac, Linux or Git Bash; ~10 s on a Mac, ~2 min in Git Bash) sources the real
 functions and replaces only the hardware: two radios, the clock, whether the master and the gateway answer. It
 checks after every switch that two radios are never on at once. Scenarios: healthy internal, internal dies,
 internal broken from boot, quick failover after a boot that ended on external, master down 10 min (with and
@@ -206,6 +255,11 @@ without the external blocked in UniFi: 0 switches), whole network down 7 min (ba
 internal dies for good (probes back off: 300, 600, 1200 s, the external stays on), both radios broken. It fails
 when two radios are on outside a probe or for longer than `PROBE_WINDOW` + one interval. A failing scenario prints its
 simulated log. Run it after every change to the script.
+
+v4 adds 8 multihome scenarios (`mh-*`, the probe and the routing replaced by the simulation): healthy, internal
+dies (failover by 330 s, it lands at 310 s), internal lossy and internal flapping for 10 min (over and back once, not
+per loss), master down, whole network down (no path change), internal broken from boot, external broken. A multihome
+scenario fails when a radio is ever switched off. 17/17 ok on 2026-10-09.
 
 ## Status
 
@@ -242,6 +296,7 @@ simulated log. Run it after every change to the script.
 | 2026-10-04 ~16:20 | F unblocks the external radios in UniFi; F deploys 40 beacons still on 0ae011f (16:22-16:24) | - | F |
 | 2026-10-04 16:26-16:30 | step 16: `fleet install live confirm` again, 8 at a time | 3 min 22 s, 165: 160 ok, 3 changed (`165633a3 9e37fba1 b42e815e`), `f240a491` changed (status read 4 s before its first switch; external off at 16:29:59, -78 dBm), 1 no answer (`d6ebbe3d`, now disconnected) | G + C |
 | 2026-10-04 16:35 | step 17: fleet `status`, 16 at a time | 49 s, 164 connected of 206: **all 164 `WIFI-GUARD OK v3`, all `active=int`, 0 on external, 0 two radios**. Open: `d6ebbe3d` disconnected (weak internal); no broken-internal beacon has come online through its external radio yet; UniFi client count to check (F) | G + C |
+| 2026-10-09 | F: beacons crash or disconnect since the v3 wifi + performance updates; design notes "Raspberry Pi WLAN Failover" (both radios on, failover by routing) | v4 written: `MODE=multihome` (default stays `single`), `diag`; simulation 17/17; routing tested on Debian iproute2-ss190107 (tables, rules, probe bypass, fallback to main, clear); v3→v4 upgrade and idempotence tested in a container through performance-update v4. Branch `feature/wifi-multihome`, not on a beacon yet. Open: F confirms UniFi takes ~500 clients before any `multihome` | F + C |
 Tested with `wifi-guard-test.ps1` (now in ping-controller `scripts/wifi-guard/`; it was `C:\Shared\Development\ping-wifi-guard\`) (sends the script to the beacon as a
 here-document through the master, no branch needed; steps in `next.txt`, reports in `reports\`). The 4 beacons with a
 broken internal radio were not reachable, so steps 9-11 are still open.
